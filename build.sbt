@@ -6,12 +6,8 @@ lazy val commonSettings = Seq(
   scalaVersion := "2.10.6"
 )
 
-// define ModuleID for library dependencies
-lazy val scalacheck = "org.scalacheck" %% "scalacheck" % "1.12.0"
-
 lazy val root = (project in file(".")).
   settings(commonSettings: _*).
-  dependsOn(RootProject(uri("https://github.com/pvorb/scala-pnm.git"))).
   settings(
     // set the name of the project
     name := "RL Segmentation",
@@ -42,6 +38,3 @@ lazy val root = (project in file(".")).
       )
 
   )
-
-EclipseKeys.withSource := true
-EclipseKeys.withJavadoc := true
