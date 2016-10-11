@@ -1,55 +1,34 @@
 package org.edoardo
 
 import java.awt.Color
-import java.io._
-
-object Pixmap {
-  private case class PbmHeader(format: String, width: Int, height: Int)
-
-  def load(filename:String):Option[RgbBitmap] = {
-    implicit val in = new BufferedInputStream(new FileInputStream(filename))
-
-    val header = readHeader
-
-    if(header.format == "P1") {
-      val bm = new RgbBitmap(header.width, header.height)
-
-      for(y <- 0 until bm.height; x <- 0 until bm.width; isBlack = in.read) {
-        if (isBlack == 1)
-          bm.setPixel(x, y, new Color(255, 255, 255))
-        else
-          bm.setPixel(x, y, new Color(0, 0, 0))
-      }
-      Some(bm)
-    } else None
-  }
-
-  private def readHeader(implicit in: InputStream) = {
-    val format = readLine
-    var line = readLine
-
-    while(line.startsWith("#"))
-      line = readLine
-
-    val parts = line.split("\\s")
-    val width = parts(0).toInt
-    val height = parts(1).toInt
-
-    PbmHeader(format, width, height)
-  }
-
-  private def readLine(implicit in:InputStream) = {
-    var out = ""
-    var b = in.read
-    while(b!=0xA){ out+=b.toChar; b=in.read }
-    out
-  }
-}
 
 object Main {
-  val img = Pixmap.load("/home/edoardo/medimaging/datasource/Bitmaps/disc/discMS4.pbm").get
-
-  def main(args: Array[String]): Unit = {
-    println("Hello, world!")
-  }
+	val root = "/home/edoardo/Dropbox/UniversityWork/Project/bitmaps/disc/"
+	val gt = Pixmap.load(root + "discGT.pbm").get
+	val policy = new Policy[Decision, Neighbourhood]
+	val numImages = 100
+	val neighbourhoodSize = 3
+	
+	def reward(x: Int, y: Int, decision: Decision): Int = {
+		val wasContained = gt.getPixel(x, y).equals(new Color(255, 255, 255))
+		if (wasContained == decision.include) 1
+		else -1
+	}
+	
+	def main(args: Array[String]): Unit = {
+		for (i <- 1 until numImages) {
+			val img = Pixmap.load(root + "discMS" + i + ".pbm").get
+			assert(img.width == gt.width && img.height == gt.height)
+			val region = new Region(img.height, img.width)
+			while (!region.completed()) {
+				val (x, y) = region.getPixel
+				val state = img.getNeighbourhood(x, y, neighbourhoodSize)
+				val decision = policy.greedyPlay(state)
+				policy.update(state, decision, reward(x, y, decision))
+				if (decision.include)
+					region.includePixel(x, y)
+			}
+			Pixmap.write(root + "discRes" + i + ".pbm", region.toBitmap)
+		}
+	}
 }
