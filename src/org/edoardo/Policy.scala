@@ -65,7 +65,7 @@ class Policy[A <: Action, S <: State[A]] {
 	  * @param reward The reward obtained.
 	  */
 	def update(state: S, action: A, reward: Int) = {
-		var map = values.getOrElse(state, null)
+		var map = addStateIfMissing(state)
 		val old = map(action)
 		map += ((action, (((old._1 * old._2) + reward) / (old._2 + 1), old._2 + 1)))
 		values += ((state, map))

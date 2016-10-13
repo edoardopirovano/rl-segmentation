@@ -25,11 +25,11 @@ class RgbBitmap(val width: Int, val height: Int) {
 		else new Color(0, 0, 0)
 	}
 	
-	def getNeighbourhood(x: Int, y: Int, n: Int): Neighbourhood = {
+	def getNeighbourhood(x: Int, y: Int, n: Int, region: Region): Neighbourhood = {
 		val margin: Int = n / 2
-		val contents = new ListBuffer[List[Color]]
+		val contents = new ListBuffer[List[Cell]]
 		for (ya <- y - margin to y + margin)
-			contents += (x - margin to x + margin).map(xa => getPixelOrBlack(xa, ya)).toList
+			contents += (x - margin to x + margin).map(xa => Cell(getPixelOrBlack(xa, ya), region.getStatus(xa, ya))).toList
 		Neighbourhood(contents.toList)
 	}
 }

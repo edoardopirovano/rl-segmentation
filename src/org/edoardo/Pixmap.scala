@@ -13,6 +13,7 @@ object Pixmap {
 		val header = readHeader
 		
 		if (header.format == "P1") {
+			// Black and white
 			val bm = new RgbBitmap(header.width, header.height)
 			
 			for (y <- 0 until bm.height) {
@@ -23,6 +24,21 @@ object Pixmap {
 						bm.setPixel(x, y, new Color(0, 0, 0))
 					else
 						bm.setPixel(x, y, new Color(255, 255, 255))
+				}
+			}
+			Some(bm)
+		} else if (header.format == "P2") {
+			// Greyscale
+			val bm = new RgbBitmap(header.width, header.height)
+			val range = readLine
+			assert(range.toInt == 255)
+			
+			for (y <- 0 until bm.height) {
+				val line = readLine
+				val parts = line.split("\\s")
+				for (x <- 0 until bm.width) {
+					val color = parts(x).toInt
+					bm.setPixel(x, y, new Color(color, color, color))
 				}
 			}
 			Some(bm)
