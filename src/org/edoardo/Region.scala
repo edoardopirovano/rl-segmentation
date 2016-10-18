@@ -5,11 +5,8 @@ import scala.collection.mutable
 
 class Region(val height: Int, width: Int) {
 	
-	object Status extends Enumeration {
-		val Selected, NotSelected, Pending, Filled, Unfilled, Unknown = Value
-	}
-	
 	val status: Array[Array[Status.Value]] = ofDim[Status.Value](height, width)
+	val toConsider: mutable.Queue[(Int, Int)] = mutable.Queue()
 	for (y <- 0 until height; x <- 0 until width)
 		status(y)(x) = Status.Unknown
 	
@@ -22,15 +19,9 @@ class Region(val height: Int, width: Int) {
 			status(ya)(xa)
 	}
 	
-	val toConsider: mutable.Queue[(Int, Int)] = mutable.Queue()
-	
 	def completed(): Boolean = toConsider.isEmpty
 	
 	def getPixel: (Int, Int) = toConsider.dequeue()
-	
-	def contains(x: Int, y: Int): Boolean = x >= 0 && y >= 0 && x < width && y < height
-	
-	def shouldConsider(x: Int, y: Int): Boolean = contains(x, y) && status(y)(x) == Status.Unknown
 	
 	def includePixel(x: Int, y: Int): Unit = {
 		status(y)(x) = Status.Selected
@@ -38,6 +29,10 @@ class Region(val height: Int, width: Int) {
 			.filter(p => shouldConsider(p._1, p._2))
 			.foreach(p => doConsider(p._1, p._2))
 	}
+	
+	def shouldConsider(x: Int, y: Int): Boolean = contains(x, y) && status(y)(x) == Status.Unknown
+	
+	def contains(x: Int, y: Int): Boolean = x >= 0 && y >= 0 && x < width && y < height
 	
 	def doConsider(x: Int, y: Int): Unit = {
 		status(y)(x) = Status.Pending
@@ -49,4 +44,8 @@ class Region(val height: Int, width: Int) {
 	}
 	
 	def getResult: SegmentationResult = new SegmentationResult(status.map(row => row.map(_ == Status.Selected)))
+	
+	object Status extends Enumeration {
+		val Selected, NotSelected, Pending, Filled, Unfilled, Unknown = Value
+	}
 }

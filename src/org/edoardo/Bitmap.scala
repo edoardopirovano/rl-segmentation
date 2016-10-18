@@ -5,8 +5,6 @@ import java.io.{BufferedInputStream, FileInputStream, InputStream}
 
 object Bitmap {
 	
-	private case class PbmHeader(format: String, width: Int, height: Int)
-	
 	def load(filename: String): Option[RgbBitmap] = {
 		implicit val in = new BufferedInputStream(new FileInputStream(filename))
 		
@@ -82,4 +80,6 @@ object Bitmap {
 		}
 		out
 	}
+	
+	private case class PbmHeader(format: String, width: Int, height: Int)
 }
