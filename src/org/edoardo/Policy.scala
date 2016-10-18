@@ -27,6 +27,22 @@ class Policy[A <: Action, S <: State[A]] {
 	var values: TrieMap[S, TrieMap[A, (BigDecimal, Long)]] = TrieMap()
 	
 	/**
+	  * Return a random action with probability 1/epsilonReciprocal or the greedy action otherwise.
+	  *
+	  * @param state             The state to consider.
+	  * @param epsilonReciprocal The reciprocal of epsilon that we want.
+	  * @return The action chosen.
+	  */
+	def epsilonSoft(state: S, epsilonReciprocal: Int): A = if (Random.nextInt(epsilonReciprocal) == 0) randomPlay(state) else greedyPlay(state)
+	
+	/**
+	  * Choose a random action to play.
+	  *
+	  * @return A random action.
+	  */
+	def randomPlay(state: S): A = Random.shuffle(addStateIfMissing(state).keys).head
+	
+	/**
 	  * Add a state to the mapping if doesn't already exist.
 	  *
 	  * @param state The state to add to the mapping.
@@ -40,28 +56,12 @@ class Policy[A <: Action, S <: State[A]] {
 	})
 	
 	/**
-	  * Choose a random action to play.
-	  *
-	  * @return A random action.
-	  */
-	def randomPlay(state: S): A = Random.shuffle(addStateIfMissing(state).keys).head
-	
-	/**
 	  * Choose the greedy action to play.
 	  *
 	  * @param state The state to consider.
 	  * @return The current greedy action from the given state.
 	  */
 	def greedyPlay(state: S): A = addStateIfMissing(state).maxBy(_._2._1)._1
-	
-	/**
-	  * Return a random action with probability 1/epsilonReciprocal or the greedy action otherwise.
-	  *
-	  * @param state             The state to consider.
-	  * @param epsilonReciprocal The reciprocal of epsilon that we want.
-	  * @return The action chosen.
-	  */
-	def epsilonSoft(state: S, epsilonReciprocal: Int): A = if (Random.nextInt(epsilonReciprocal) == 0) randomPlay(state) else greedyPlay(state)
 	
 	/**
 	  * Update the policy by adding an observed reward for a given play.
@@ -75,13 +75,5 @@ class Policy[A <: Action, S <: State[A]] {
 		val old: (BigDecimal, Long) = map(action)
 		map += ((action, (((old._1 * old._2) + reward) / (old._2 + 1), old._2 + 1)))
 		values += ((state, map))
-	}
-	
-	def lambdaLearn(actions: List[(S, A, Int)], lambda: Double): Unit = {
-		var previousReward: Double = 0.0
-		for ((state, decision, reward) <- actions.reverse) {
-			previousReward = (previousReward * 0.5) + reward
-			update(state, decision, previousReward)
-		}
 	}
 }

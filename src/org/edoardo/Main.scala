@@ -4,14 +4,16 @@ object Main {
 	val practiceRepeats = 100
 	val epsilonReciprocal = 10
 	val includeFirst = 9
-	val lambda = 0.5
+	val dilateErodeConstant = 5
 	
 	val policy = new Policy[Decision, PixelInfo]
 	
 	def main(args: Array[String]): Unit = {
-		doImage("knee.pgm", "knee1result.pbm", Some("knee-gt.pgm"), (230, 150))
+		doImage("knee1.pgm", "knee1result.pbm", Some("knee1-gt.pgm"), (230, 150))
 		doImage("knee2.pgm", "knee2result.pbm", Some("knee2-gt.pgm"), (150, 100))
-		doImage("knee.pgm", "knee1resultFinal.pbm", None, (242, 142))
+		doImage("knee3.pgm", "knee3result.pbm", Some("knee3-gt.pgm"), (300, 225))
+		doImage("knee4.pgm", "knee4result.pbm", Some("knee4-gt.pgm"), (170, 170))
+		doImage("knee1.pgm", "knee1resultFinal.pbm", None, (242, 142))
 		doImage("knee2.pgm", "knee2resultFinal.pbm", None, (175, 135))
 		doImage("knee3.pgm", "knee3resultFinal.pbm", None, (250, 180))
 		doImage("knee4.pgm", "knee4resultFinal.pbm", None, (130, 117))
@@ -34,22 +36,22 @@ object Main {
 		val region = new Region(img.height, img.width)
 		region.doConsider(seed._1, seed._2)
 		var i = 0
-		var decisions: List[(PixelInfo, Decision, Int)] = Nil
+		var decisions: List[((Int, Int), PixelInfo, Decision)] = Nil
 		while (!region.completed()) {
 			i += 1
 			val (x, y) = region.getPixel
 			val state: PixelInfo = img.getState(x, y)
 			val decision: Decision = if (i <= includeFirst) Decision(true) else if (gt.isEmpty) policy.greedyPlay(state) else policy.epsilonSoft(state, epsilonReciprocal)
-			decisions ::= (state, decision, reward(x, y, decision.include, gt))
+			decisions ::= ((x, y), state, decision)
 			if (decision.include)
 				region.includePixel(x, y)
 			else
 				region.excludePixel(x, y)
 		}
 		val result: SegmentationResult = region.getResult
-		result.dilateAndErode(3)
+		result.dilateAndErode(5)
 		if (gt.isDefined)
-			policy.lambdaLearn(decisions, lambda)
+			decisions.foreach { case ((x, y), state, dec) => policy.update(state, dec, reward(x, y, result.doesContain(x, y), gt)) }
 		result
 	}
 	
