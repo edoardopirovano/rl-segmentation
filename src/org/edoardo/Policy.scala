@@ -27,13 +27,17 @@ class Policy[A <: Action, S <: State[A]] {
 	var values: TrieMap[S, TrieMap[A, (BigDecimal, Long)]] = TrieMap()
 	
 	/**
-	  * Return a random action with probability 1/epsilonReciprocal or the greedy action otherwise.
+	  * Add a state to the mapping if doesn't already exist.
 	  *
-	  * @param state             The state to consider.
-	  * @param epsilonReciprocal The reciprocal of epsilon that we want.
-	  * @return The action chosen.
+	  * @param state The state to add to the mapping.
+	  * @return The corresponding object for its estimated value.
 	  */
-	def epsilonSoft(state: S, epsilonReciprocal: Int): A = if (Random.nextInt(epsilonReciprocal) == 0) randomPlay(state) else greedyPlay(state)
+	private def addStateIfMissing(state: S): TrieMap[A, (BigDecimal, Long)] = values.getOrElseUpdate(state, {
+		val result: TrieMap[A, (BigDecimal, Long)] = new TrieMap()
+		for (a <- state.getAll)
+			result += ((a, (BigDecimal(0.0), 0L)))
+		result
+	})
 	
 	/**
 	  * Choose a random action to play.
@@ -51,32 +55,33 @@ class Policy[A <: Action, S <: State[A]] {
 	def greedyPlay(state: S): A = addStateIfMissing(state).maxBy(_._2._1)._1
 	
 	/**
+	  * Return a random action with probability 1/epsilonReciprocal or the greedy action otherwise.
+	  *
+	  * @param state             The state to consider.
+	  * @param epsilonReciprocal The reciprocal of epsilon that we want.
+	  * @return The action chosen.
+	  */
+	def epsilonSoft(state: S, epsilonReciprocal: Int): A = if (Random.nextInt(epsilonReciprocal) == 0) randomPlay(state) else greedyPlay(state)
+	
+	/**
 	  * Update the policy by adding an observed reward for a given play.
 	  *
 	  * @param state  The state the play was made from.
 	  * @param action The action performed.
 	  * @param reward The reward obtained.
 	  */
-	def update(state: S, action: A, reward: Int): Unit = {
-		if (reward != 0) {
-			// Ignore
-			var map: TrieMap[A, (BigDecimal, Long)] = addStateIfMissing(state)
-			val old: (BigDecimal, Long) = map(action)
-			map += ((action, (((old._1 * old._2) + reward) / (old._2 + 1), old._2 + 1)))
-			values += ((state, map))
-		}
+	def update(state: S, action: A, reward: Double): Unit = {
+		var map: TrieMap[A, (BigDecimal, Long)] = addStateIfMissing(state)
+		val old: (BigDecimal, Long) = map(action)
+		map += ((action, (((old._1 * old._2) + reward) / (old._2 + 1), old._2 + 1)))
+		values += ((state, map))
 	}
 	
-	/**
-	  * Add a state to the mapping if doesn't already exist.
-	  *
-	  * @param state The state to add to the mapping.
-	  * @return The corresponding object for its estimated value.
-	  */
-	private def addStateIfMissing(state: S): TrieMap[A, (BigDecimal, Long)] = values.getOrElseUpdate(state, {
-		val result: TrieMap[A, (BigDecimal, Long)] = new TrieMap()
-		for (a <- state.getAll)
-			result += ((a, (BigDecimal(0.0), 0L)))
-		result
-	})
+	def lambdaLearn(actions: List[(S, A, Int)], lambda: Double): Unit = {
+		var previousReward: Double = 0.0
+		for ((state, decision, reward) <- actions.reverse) {
+			previousReward = (previousReward * 0.5) + reward
+			update(state, decision, previousReward)
+		}
+	}
 }

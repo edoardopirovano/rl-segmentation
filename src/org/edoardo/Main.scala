@@ -4,6 +4,7 @@ object Main {
 	val practiceRepeats = 100
 	val epsilonReciprocal = 10
 	val includeFirst = 9
+	val lambda = 0.5
 	
 	val policy = new Policy[Decision, PixelInfo]
 	
@@ -33,13 +34,13 @@ object Main {
 		val region = new Region(img.height, img.width)
 		region.doConsider(seed._1, seed._2)
 		var i = 0
-		var decisions: List[(PixelInfo, Decision)] = Nil
+		var decisions: List[(PixelInfo, Decision, Int)] = Nil
 		while (!region.completed()) {
 			i += 1
 			val (x, y) = region.getPixel
 			val state: PixelInfo = img.getState(x, y)
 			val decision: Decision = if (i <= includeFirst) Decision(true) else if (gt.isEmpty) policy.greedyPlay(state) else policy.epsilonSoft(state, epsilonReciprocal)
-			decisions ::= (state, decision)
+			decisions ::= (state, decision, reward(x, y, decision.include, gt))
 			if (decision.include)
 				region.includePixel(x, y)
 			else
@@ -47,13 +48,8 @@ object Main {
 		}
 		val result: SegmentationResult = region.getResult
 		result.dilateAndErode(3)
-		if (gt.isDefined) {
-			var totalReward = 0
-			for (x <- 0 until img.width; y <- 0 until img.height; included = result.doesContain(x, y))
-				totalReward += reward(x, y, included, gt)
-			for ((state, decision, reward) <- decisions)
-				policy.update(state, decision, totalReward)
-		}
+		if (gt.isDefined)
+			policy.lambdaLearn(decisions, lambda)
 		result
 	}
 	
