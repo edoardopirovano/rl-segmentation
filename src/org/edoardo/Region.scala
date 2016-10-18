@@ -1,14 +1,12 @@
 package org.edoardo
 
-import java.awt.Color
-
-import Array.ofDim
+import scala.Array.ofDim
 import scala.collection.mutable
 
 class Region(val height: Int, width: Int) {
 	
 	object Status extends Enumeration {
-		val Selected, NotSelected, Pending, Filled, Unknown = Value
+		val Selected, NotSelected, Pending, Filled, Unfilled, Unknown = Value
 	}
 	
 	val status: Array[Array[Status.Value]] = ofDim[Status.Value](height, width)
@@ -50,32 +48,5 @@ class Region(val height: Int, width: Int) {
 		status(y)(x) = Status.NotSelected
 	}
 	
-	def didSelect(x: Int, y: Int): Boolean = status(y)(x) == Status.Selected
-	
-	// Dilate by one pixel to reduce noise
-	def dilate(): Unit = {
-		for (i <- 0 until height; j <- 0 until width) {
-			if (getStatus(j, i) == Status.Selected) {
-				if (i > 0 && status(i - 1)(j) != Status.Selected) status(i - 1)(j) = Status.Filled
-				if (j > 0 && status(i)(j - 1) != Status.Selected) status(i)(j - 1) = Status.Filled
-				if (i + 1 < width && status(i + 1)(j) != Status.Selected) status(i + 1)(j) = Status.Filled
-				if (j + 1 < height && status(i)(j + 1) != Status.Selected) status(i)(j + 1) = Status.Filled
-			}
-		}
-		for (i <- 0 until height; j <- 0 until width) {
-			if (status(i)(j) == Status.Filled)
-				status(i)(j) = Status.Selected
-		}
-	}
-	
-	def toBitmap: RgbBitmap = {
-		val bm = new RgbBitmap(width, height)
-		for (y <- 0 until height; x <- 0 until width) {
-			if (status(y)(x) == Status.Selected)
-				bm.setPixel(x, y, new Color(255, 255, 255))
-			else
-				bm.setPixel(x, y, new Color(0, 0, 0))
-		}
-		bm
-	}
+	def getResult: SegmentationResult = new SegmentationResult(status.map(row => row.map(_ == Status.Selected)))
 }

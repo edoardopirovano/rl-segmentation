@@ -32,7 +32,7 @@ class Policy[A <: Action, S <: State[A]] {
 	  * @param state The state to add to the mapping.
 	  * @return The corresponding object for its estimated value.
 	  */
-	def addStateIfMissing(state: S): TrieMap[A, (BigDecimal, Long)] = values.getOrElseUpdate(state, {
+	private def addStateIfMissing(state: S): TrieMap[A, (BigDecimal, Long)] = values.getOrElseUpdate(state, {
 		val result: TrieMap[A, (BigDecimal, Long)] = new TrieMap()
 		for (a <- state.getAll)
 			result += ((a, (BigDecimal(0.0), 0L)))

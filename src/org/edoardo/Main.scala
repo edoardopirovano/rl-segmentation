@@ -3,19 +3,20 @@ package org.edoardo
 import java.awt.Color
 
 object Main {
-	val practiceRepeats = 5
+	val practiceRepeats = 15
 	val epsilonReciprocal = 10
 	val includeFirst = 9
 	
 	val policy = new Policy[Decision, PixelInfo]
 	
-	def reward(x: Int, y: Int, decision: Decision, gt: RgbBitmap): Int = {
-		val wasContained: Boolean = gt.getPixel(x, y).equals(new Color(255, 255, 255))
-		if (wasContained == decision.include) 1
+	def reward(x: Int, y: Int, decision: Boolean, gt: Option[RgbBitmap]): Int = {
+		if (gt.isEmpty) return 0
+		val wasContained: Boolean = gt.get.getPixel(x, y).equals(new Color(255, 255, 255))
+		if (wasContained == decision) 1
 		else -1
 	}
 	
-	def analyseImage(img: RgbBitmap, gt: Option[RgbBitmap], seed: (Int, Int)): Region = {
+	def analyseImage(img: RgbBitmap, gt: Option[RgbBitmap], seed: (Int, Int)): SegmentationResult = {
 		if (gt.isDefined)
 			assert(img.width == gt.get.width && img.height == gt.get.height)
 		val region = new Region(img.height, img.width)
@@ -31,13 +32,14 @@ object Main {
 			else
 				region.excludePixel(x, y)
 		}
-		region.dilate()
+		val result: SegmentationResult = region.getResult
+		result.dilateAndErode(3)
 		if (gt.isDefined) {
 			for (x <- 0 until img.width; y <- 0 until img.height)
-				policy.update(img.getState(x, y), Decision(region.didSelect(x, y)),
-					reward(x, y, Decision(region.didSelect(x, y)), gt.get))
+				policy.update(img.getState(x, y), Decision(result.didSelect(x, y)),
+					reward(x, y, result.didSelect(x, y), gt))
 		}
-		region
+		result
 	}
 	
 	def doImage(name: String, resultName: String, gtName: Option[String], seed: (Int, Int)): Unit = {
@@ -45,9 +47,9 @@ object Main {
 		val img: RgbBitmap = Bitmap.load(name).get
 		if (gt.isDefined) {
 			for (i <- 0 until practiceRepeats)
-				Bitmap.write(resultName.substring(0, resultName.length - 4) + "-" + i + ".pbm", analyseImage(img, gt, seed).toBitmap)
+				analyseImage(img, gt, seed).writeTo(resultName.substring(0, resultName.length - 4) + "-" + i + ".pbm")
 		}
-		Bitmap.write(resultName, analyseImage(img, gt, seed).toBitmap)
+		analyseImage(img, null, seed).writeTo(resultName)
 	}
 	
 	def main(args: Array[String]): Unit = {
@@ -56,5 +58,6 @@ object Main {
 		doImage("knee.pgm", "knee1resultFinal.pbm", None, (242, 142))
 		doImage("knee2.pgm", "knee2resultFinal.pbm", None, (175, 135))
 		doImage("knee3.pgm", "knee3resultFinal.pbm", None, (250, 180))
+		doImage("knee4.pgm", "knee4resultFinal.pbm", None, (130, 117))
 	}
 }

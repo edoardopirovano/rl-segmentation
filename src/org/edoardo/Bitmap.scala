@@ -1,7 +1,7 @@
 package org.edoardo
 
 import java.awt.Color
-import java.io.{BufferedInputStream, BufferedOutputStream, FileInputStream, FileOutputStream, InputStream}
+import java.io.{BufferedInputStream, FileInputStream, InputStream}
 
 object Bitmap {
 	
@@ -57,23 +57,6 @@ object Bitmap {
 			bm.completed()
 			Some(bm)
 		} else None
-	}
-	
-	def header(height: Int, width: Int): String = "P1\n" + width + " " + height + "\n"
-	
-	def write(filename: String, bm: RgbBitmap): Unit = {
-		val s = new BufferedOutputStream(new FileOutputStream(filename))
-		s.write(header(bm.height, bm.width).getBytes)
-		for (y <- 0 until bm.height) {
-			for (x <- 0 until bm.width) {
-				if (bm.getPixel(x, y).equals(new Color(255, 255, 255)))
-					s.write("0 ".getBytes)
-				else
-					s.write("1 ".getBytes)
-			}
-			s.write("\n".getBytes)
-		}
-		s.close()
 	}
 	
 	private def readHeader(implicit in: InputStream): PbmHeader = {

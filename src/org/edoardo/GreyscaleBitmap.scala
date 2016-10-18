@@ -3,9 +3,6 @@ package org.edoardo
 import java.awt.Color
 import java.awt.image.BufferedImage
 
-/**
-  * Created by edoardo on 17/10/16.
-  */
 class GreyscaleBitmap(val width: Int, val height: Int) {
 	val image = new BufferedImage(width, height, BufferedImage.TYPE_USHORT_GRAY)
 	

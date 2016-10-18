@@ -7,12 +7,11 @@ import java.awt.{Color, Graphics}
 class RgbBitmap(val width: Int, val height: Int) {
 	val image = new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR)
 	
-	val xGradient = new GreyscaleBitmap(width, height)
-	val yGradient = new GreyscaleBitmap(width, height)
+	val gradientMagnitude = new GreyscaleBitmap(width, height)
 	val greyScale = new GreyscaleBitmap(width, height)
 	
 	def getState(x: Int, y: Int): PixelInfo = {
-		PixelInfo(xGradient.getPixel(x, y), yGradient.getPixel(x, y), greyScale.getPixel(x, y))
+		PixelInfo(gradientMagnitude.getPixel(x, y), greyScale.getPixel(x, y))
 	}
 	
 	def fill(c: Color): Unit = {
@@ -32,17 +31,18 @@ class RgbBitmap(val width: Int, val height: Int) {
 		else 0 // Pixels outside the image are regarded as black
 	}
 	
-	def computeGradient(color1: Int, color2: Int): Int = {
-		((color1 - color2) / 2) + 127
-	}
+	def computeGradient(color1: Int, color2: Int): Int = ((color1 - color2) / 2) + 127
+	
+	def computeMagnitude(xGradient: Int, yGradient: Int): Int = (Math.sqrt(xGradient ^ 2 + yGradient ^ 2).toInt/360) * 255
 	
 	def completed(): Unit = {
 		for (x <- 0 until width; y <- 0 until height; l = luminosity(getPixel(x, y)))
 			greyScale.setPixel(x, y, l)
-		for (x <- 0 until width; y <- 0 until height; g = computeGradient(getGrey(x + 1, y), getGrey(x - 1, y)))
-			xGradient.setPixel(x, y, g)
-		for (x <- 0 until width; y <- 0 until height; g = computeGradient(getGrey(x, y + 1), getGrey(x, y - 1)))
-			yGradient.setPixel(x, y, g)
+		for (x <- 0 until width; y <- 0 until height) {
+			val xGradient: Int = computeGradient(getGrey(x + 1, y), getGrey(x - 1, y))
+			val yGradient: Int = computeGradient(getGrey(x, y + 1), getGrey(x, y - 1))
+			gradientMagnitude.setPixel(x, y, computeMagnitude(xGradient, yGradient))
+		}
 	}
 	
 	private def luminosity(c: Color): Int = (0.2126 * c.getRed + 0.7152 * c.getGreen + 0.0722 * c.getBlue + 0.5).toInt
