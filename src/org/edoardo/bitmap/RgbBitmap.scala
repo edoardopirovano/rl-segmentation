@@ -1,7 +1,9 @@
-package org.edoardo
+package org.edoardo.bitmap
 
 import java.awt.image.BufferedImage
 import java.awt.{Color, Graphics}
+
+import org.edoardo.segmentation.SegmentationResult
 
 import scala.Array.ofDim
 
@@ -11,9 +13,6 @@ class RgbBitmap(val width: Int, val height: Int) {
 	val gradientMagnitude = new GreyscaleBitmap(width, height)
 	val gradientDir: Array[Array[Dir.Value]] = ofDim[Dir.Value](height, width)
 	val greyScale = new GreyscaleBitmap(width, height)
-	
-	def getState(x: Int, y: Int): PixelInfo =
-		PixelInfo(greyScale.getPixel(x, y), gradientMagnitude.getPixel(x, y))
 	
 	def fill(c: Color): Unit = {
 		val g: Graphics = image.getGraphics
@@ -46,6 +45,8 @@ class RgbBitmap(val width: Int, val height: Int) {
 	def computeMagnitude(xGradient: Int, yGradient: Int): Int = (Math.sqrt(xGradient ^ 2 + yGradient ^ 2).toInt / 360) * 255
 	
 	private def luminosity(c: Color): Int = (0.2126 * c.getRed + 0.7152 * c.getGreen + 0.0722 * c.getBlue + 0.5).toInt
+	
+	def getGradientMagnitude(x: Int, y: Int): Int = gradientMagnitude.getPixel(x, y)
 	
 	def direction(degrees: Int): Dir.Value = {
 		if (45 <= degrees && degrees < 135) Dir.Up

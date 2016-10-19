@@ -1,4 +1,4 @@
-package org.edoardo
+package org.edoardo.segmentation
 
 import scala.Array.ofDim
 import scala.collection.mutable
@@ -41,4 +41,5 @@ class Region(val height: Int, width: Int) {
 	object Status extends Enumeration {
 		val Selected, NotSelected, Pending = Value
 	}
+	
 }

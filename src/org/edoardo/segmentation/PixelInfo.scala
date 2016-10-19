@@ -1,4 +1,6 @@
-package org.edoardo
+package org.edoardo.segmentation
+
+import org.edoardo.rl.{Action, State}
 
 case class Decision(include: Boolean) extends Action
 

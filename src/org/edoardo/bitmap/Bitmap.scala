@@ -1,4 +1,4 @@
-package org.edoardo
+package org.edoardo.bitmap
 
 import java.awt.Color
 import java.io.{BufferedInputStream, FileInputStream, InputStream}
@@ -82,4 +82,5 @@ object Bitmap {
 	}
 	
 	private case class PbmHeader(format: String, width: Int, height: Int)
+	
 }

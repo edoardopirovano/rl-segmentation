@@ -1,4 +1,4 @@
-package org.edoardo
+package org.edoardo.rl
 
 import scala.collection.concurrent.TrieMap
 import scala.util.Random
@@ -43,6 +43,14 @@ class Policy[A <: Action, S <: State[A]] {
 	def randomPlay(state: S): A = Random.shuffle(addStateIfMissing(state).keys).head
 	
 	/**
+	  * Choose the greedy action to play.
+	  *
+	  * @param state The state to consider.
+	  * @return The current greedy action from the given state.
+	  */
+	def greedyPlay(state: S): A = addStateIfMissing(state).maxBy(_._2._1)._1
+	
+	/**
 	  * Add a state to the mapping if doesn't already exist.
 	  *
 	  * @param state The state to add to the mapping.
@@ -54,14 +62,6 @@ class Policy[A <: Action, S <: State[A]] {
 			result += ((a, (BigDecimal(0.0), 0L)))
 		result
 	})
-	
-	/**
-	  * Choose the greedy action to play.
-	  *
-	  * @param state The state to consider.
-	  * @return The current greedy action from the given state.
-	  */
-	def greedyPlay(state: S): A = addStateIfMissing(state).maxBy(_._2._1)._1
 	
 	/**
 	  * Update the policy by adding an observed reward for a given play.

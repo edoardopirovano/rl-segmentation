@@ -1,6 +1,9 @@
-package org.edoardo
+package org.edoardo.segmentation
 
-object Main {
+import org.edoardo.bitmap.{Bitmap, RgbBitmap}
+import org.edoardo.rl.Policy
+
+object RLSegmentation {
 	val practiceRepeats = 100
 	val epsilonReciprocal = 10
 	val includeFirst = 9
@@ -27,7 +30,7 @@ object Main {
 			for (i <- 0 until practiceRepeats)
 				analyseImage(img, gt, seed).writeTo(resultName.substring(0, resultName.length - 4) + "-" + i + ".pbm")
 		}
-		analyseImage(img, None, seed).writeTo(resultName)
+		analyseImage(img, None, seed).writeTo(resultName, img)
 	}
 	
 	def analyseImage(img: RgbBitmap, gt: Option[SegmentationResult], seed: (Int, Int)): SegmentationResult = {
@@ -40,7 +43,7 @@ object Main {
 		while (!region.completed()) {
 			i += 1
 			val (x, y) = region.getPixel
-			val state = img.getState(x, y)
+			val state: PixelInfo = PixelInfo(img.getGrey(x, y), img.getGradientMagnitude(x, y))
 			val decision: Decision = if (i <= includeFirst) Decision(true) else if (gt.isEmpty) policy.greedyPlay(state) else policy.epsilonSoft(state, epsilonReciprocal)
 			decisions ::= ((x, y), state, decision)
 			if (decision.include)

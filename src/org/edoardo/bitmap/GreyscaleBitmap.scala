@@ -1,4 +1,4 @@
-package org.edoardo
+package org.edoardo.bitmap
 
 import java.awt.Color
 import java.awt.image.BufferedImage
