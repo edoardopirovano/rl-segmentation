@@ -40,7 +40,7 @@ object Main {
 		while (!region.completed()) {
 			i += 1
 			val (x, y) = region.getPixel
-			val state: PixelInfo = img.getState(x, y)
+			val state = img.getState(x, y)
 			val decision: Decision = if (i <= includeFirst) Decision(true) else if (gt.isEmpty) policy.greedyPlay(state) else policy.epsilonSoft(state, epsilonReciprocal)
 			decisions ::= ((x, y), state, decision)
 			if (decision.include)

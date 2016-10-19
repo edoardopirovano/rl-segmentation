@@ -9,11 +9,11 @@ class RgbBitmap(val width: Int, val height: Int) {
 	val image = new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR)
 	
 	val gradientMagnitude = new GreyscaleBitmap(width, height)
+	val gradientDir: Array[Array[Dir.Value]] = ofDim[Dir.Value](height, width)
 	val greyScale = new GreyscaleBitmap(width, height)
 	
-	def getState(x: Int, y: Int): PixelInfo = {
-		PixelInfo(gradientMagnitude.getPixel(x, y), greyScale.getPixel(x, y))
-	}
+	def getState(x: Int, y: Int): PixelInfo =
+		PixelInfo(greyScale.getPixel(x, y), gradientMagnitude.getPixel(x, y))
 	
 	def fill(c: Color): Unit = {
 		val g: Graphics = image.getGraphics
@@ -29,6 +29,7 @@ class RgbBitmap(val width: Int, val height: Int) {
 		for (x <- 0 until width; y <- 0 until height) {
 			val xGradient: Int = computeGradient(getGrey(x + 1, y), getGrey(x - 1, y))
 			val yGradient: Int = computeGradient(getGrey(x, y + 1), getGrey(x, y - 1))
+			// gradientDir(y)(x) = direction(Math.atan2(yGradient.toDouble, xGradient.toDouble).toDegrees.toInt)
 			gradientMagnitude.setPixel(x, y, computeMagnitude(xGradient, yGradient))
 		}
 	}
@@ -46,6 +47,13 @@ class RgbBitmap(val width: Int, val height: Int) {
 	
 	private def luminosity(c: Color): Int = (0.2126 * c.getRed + 0.7152 * c.getGreen + 0.0722 * c.getBlue + 0.5).toInt
 	
+	def direction(degrees: Int): Dir.Value = {
+		if (45 <= degrees && degrees < 135) Dir.Up
+		else if (-135 < degrees && degrees <= -45) Dir.Down
+		else if (degrees < -135 || degrees > 135) Dir.Left
+		else Dir.Right
+	}
+	
 	def toSegmentationResult: SegmentationResult = {
 		val result: Array[Array[Boolean]] = ofDim[Boolean](height, width)
 		for (x <- 0 until width; y <- 0 until height)
@@ -54,4 +62,9 @@ class RgbBitmap(val width: Int, val height: Int) {
 	}
 	
 	def getPixel(x: Int, y: Int) = new Color(image.getRGB(x, y))
+	
+	object Dir extends Enumeration {
+		val Up, Down, Right, Left = Value
+	}
+	
 }

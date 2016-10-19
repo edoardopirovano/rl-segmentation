@@ -8,20 +8,13 @@ class Region(val height: Int, width: Int) {
 	val status: Array[Array[Status.Value]] = ofDim[Status.Value](height, width)
 	val toConsider: mutable.Queue[(Int, Int)] = mutable.Queue()
 	for (y <- 0 until height; x <- 0 until width)
-		status(y)(x) = Status.Unknown
-	
-	def getStatus(xa: Int, ya: Int): Status.Value = {
-		if (!contains(xa, ya))
-			Status.NotSelected
-		else if (status(ya)(xa) == Status.Pending)
-			Status.Unknown
-		else
-			status(ya)(xa)
-	}
+		status(y)(x) = Status.NotSelected
 	
 	def completed(): Boolean = toConsider.isEmpty
 	
 	def getPixel: (Int, Int) = toConsider.dequeue()
+	
+	def doesContain(x: Int, y: Int): Boolean = status(y)(x) == Status.Selected
 	
 	def includePixel(x: Int, y: Int): Unit = {
 		status(y)(x) = Status.Selected
@@ -30,7 +23,7 @@ class Region(val height: Int, width: Int) {
 			.foreach(p => doConsider(p._1, p._2))
 	}
 	
-	def shouldConsider(x: Int, y: Int): Boolean = contains(x, y) && status(y)(x) == Status.Unknown
+	def shouldConsider(x: Int, y: Int): Boolean = contains(x, y) && status(y)(x) == Status.NotSelected
 	
 	def contains(x: Int, y: Int): Boolean = x >= 0 && y >= 0 && x < width && y < height
 	
@@ -46,6 +39,6 @@ class Region(val height: Int, width: Int) {
 	def getResult: SegmentationResult = new SegmentationResult(status.map(row => row.map(_ == Status.Selected)))
 	
 	object Status extends Enumeration {
-		val Selected, NotSelected, Pending, Filled, Unfilled, Unknown = Value
+		val Selected, NotSelected, Pending = Value
 	}
 }
