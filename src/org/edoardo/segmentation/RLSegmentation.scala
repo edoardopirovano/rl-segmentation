@@ -4,7 +4,6 @@ import org.edoardo.bitmap.{Bitmap, RgbBitmap}
 import org.edoardo.rl.Policy
 
 object RLSegmentation {
-	val practiceRepeats = 100
 	val epsilonReciprocal = 10
 	val includeFirst = 9
 	val dilateErodeConstant = 5
@@ -12,22 +11,17 @@ object RLSegmentation {
 	val policy = new Policy[Decision, PixelInfo]
 	
 	def main(args: Array[String]): Unit = {
-		doImage("knee1.pgm", "knee1result.pbm", Some("knee1-gt.pgm"), (230, 150))
-		doImage("knee2.pgm", "knee2result.pbm", Some("knee2-gt.pgm"), (150, 100))
-		doImage("knee3.pgm", "knee3result.pbm", Some("knee3-gt.pgm"), (300, 225))
-		doImage("knee4.pgm", "knee4result.pbm", Some("knee4-gt.pgm"), (170, 170))
-		doImage("knee1.pgm", "knee1resultFinal.pbm", None, (242, 142))
-		doImage("knee2.pgm", "knee2resultFinal.pbm", None, (175, 135))
-		doImage("knee3.pgm", "knee3resultFinal.pbm", None, (250, 180))
-		doImage("knee4.pgm", "knee4resultFinal.pbm", None, (130, 117))
+		doImage("knee1.pgm", "knee1result.pbm", (230, 150), Some("knee1-gt.pgm"))
+		doImage("knee2.pgm", "knee2result.pbm", (150, 100), Some("knee2-gt.pgm"))
+		doImage("knee3.pgm", "knee3resultFinal.pbm", (250, 180))
 	}
 	
-	def doImage(name: String, resultName: String, gtName: Option[String], seed: (Int, Int)): Unit = {
+	def doImage(name: String, resultName: String, seed: (Int, Int), gtName: Option[String] = None, numPracticeRuns: Int = 10): Unit = {
 		val gt: Option[SegmentationResult] = gtName.map(name => Bitmap.load(name).get.toSegmentationResult)
 		gt.foreach(result => result.completeGT())
 		val img: RgbBitmap = Bitmap.load(name).get
 		if (gt.isDefined) {
-			for (i <- 0 until practiceRepeats)
+			for (i <- 0 until numPracticeRuns)
 				analyseImage(img, gt, seed).writeTo(resultName.substring(0, resultName.length - 4) + "-" + i + ".pbm")
 		}
 		analyseImage(img, None, seed).writeTo(resultName, img)
@@ -52,7 +46,7 @@ object RLSegmentation {
 				region.excludePixel(x, y)
 		}
 		val result: SegmentationResult = region.getResult
-		result.dilateAndErode(5)
+		result.dilateAndErode(dilateErodeConstant)
 		if (gt.isDefined)
 			decisions.foreach { case ((x, y), state, dec) => policy.update(state, dec, reward(x, y, result.doesContain(x, y), gt)) }
 		result

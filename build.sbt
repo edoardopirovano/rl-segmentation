@@ -6,6 +6,15 @@ lazy val commonSettings = Seq(
   scalaVersion := "2.10.6"
 )
 
+resolvers +=
+    "ImageJ Releases" at "http://maven.imagej.net/content/repositories/releases/"
+
+resolvers +=
+    "Boundless" at "http://repo.boundlessgeo.com/main/"
+
+resolvers +=
+    "Unidata Releases" at "https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases/"
+
 lazy val root = (project in file(".")).
   settings(commonSettings: _*).
   settings(
@@ -35,6 +44,13 @@ lazy val root = (project in file(".")).
         ExclusionRule(organization = "com.sun.jdmk"),
         ExclusionRule(organization = "com.sun.jmx"),
         ExclusionRule(organization = "javax.jms")
-      )
+      ),
+      
+      // https://mvnrepository.com/artifact/net.imglib2/imglib2
+      libraryDependencies += "net.imglib2" % "imglib2" % "3.2.1",
+    
+      // https://mvnrepository.com/artifact/net.imglib2/imglib2-algorithm
+      libraryDependencies += "net.imglib2" % "imglib2-algorithm" % "0.6.2"
+
 
   )
