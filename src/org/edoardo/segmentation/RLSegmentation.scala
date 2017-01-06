@@ -1,65 +1,65 @@
 package org.edoardo.segmentation
 
-import org.edoardo.bitmap.{Bitmap, RgbBitmap}
+import ij.IJ
+import org.edoardo.bitmap.{WatershedRegion, WrappedImage}
 import org.edoardo.rl.Policy
 
 object RLSegmentation {
 	val epsilonReciprocal = 10
-	val includeFirst = 9
-	val dilateErodeConstant = 5
+	val dilateErodeConstant = 3
 	
-	val policy = new Policy[Decision, PixelInfo]
+	val policy = new Policy[Decision, RegionInfo]
 	
 	def main(args: Array[String]): Unit = {
 		doImage("knee1.pgm", "knee1result.pbm", (230, 150), Some("knee1-gt.pgm"))
 		doImage("knee2.pgm", "knee2result.pbm", (150, 100), Some("knee2-gt.pgm"))
-		doImage("knee3.pgm", "knee3resultFinal.pbm", (250, 180))
+		doImage("knee3.pgm", "knee3result.pbm", (250, 180), Some("knee3-gt.pgm"))
+		doImage("knee4.pgm", "knee4result.pbm", (125, 125), Some("knee4-gt.pgm"))
+		doImage("knee10.pgm", "knee10result.pbm", (250, 180))
 	}
 	
-	def doImage(name: String, resultName: String, seed: (Int, Int), gtName: Option[String] = None, numPracticeRuns: Int = 10): Unit = {
-		val gt: Option[SegmentationResult] = gtName.map(name => Bitmap.load(name).get.toSegmentationResult)
+	def doImage(name: String, resultName: String, seed: (Int, Int), gtName: Option[String] = None, numPracticeRuns: Int = 40): Unit = {
+		val gt: Option[SegmentationResult] = gtName.map(name => new WrappedImage(IJ.openImage(name)).toSegmentationResult)
 		gt.foreach(result => result.completeGT())
-		val img: RgbBitmap = Bitmap.load(name).get
+		val img: WrappedImage = new WrappedImage(IJ.openImage(name))
+		img.doPreProcess(diffuse = true, watershed = true)
 		if (gt.isDefined) {
 			for (i <- 0 until numPracticeRuns)
 				analyseImage(img, gt, seed).writeTo(resultName.substring(0, resultName.length - 4) + "-" + i + ".pbm")
 		}
-		analyseImage(img, None, seed).writeTo(resultName, img)
+		analyseImage(img, None, seed).writeTo(resultName)
 	}
 	
-	def analyseImage(img: RgbBitmap, gt: Option[SegmentationResult], seed: (Int, Int)): SegmentationResult = {
+	def analyseImage(img: WrappedImage, gt: Option[SegmentationResult], seed: (Int, Int)): SegmentationResult = {
 		if (gt.isDefined)
 			assert(img.width == gt.get.width && img.height == gt.get.height)
-		val region = new Region(img.height, img.width)
-		region.doConsider(seed._1, seed._2)
-		var i = 0
-		var decisions: List[((Int, Int), PixelInfo, Decision)] = Nil
-		while (!region.completed()) {
-			i += 1
-			val (x, y) = region.getPixel
-			val state: PixelInfo = PixelInfo(img.getGrey(x, y), img.getGradientMagnitude(x, y))
-			val decision: Decision = if (i <= includeFirst) Decision(true) else if (gt.isEmpty) policy.greedyPlay(state) else policy.epsilonSoft(state, epsilonReciprocal)
-			decisions ::= ((x, y), state, decision)
+		val selection = new Selection(img.height, img.width)
+		var decisions: List[(RegionInfo, WatershedRegion, Decision)] = List()
+		selection.startPixel(seed._1, seed._2, img)
+		while (!selection.completed()) {
+			val region: WatershedRegion = selection.getRegion
+			val state: RegionInfo = region.getInfo
+			val decision: Decision = if (gt.isEmpty) policy.greedyPlay(state) else policy.epsilonSoft(state, epsilonReciprocal)
+			decisions ::= (state, region, decision)
 			if (decision.include)
-				region.includePixel(x, y)
+				selection.includeRegion(region)
 			else
-				region.excludePixel(x, y)
+				selection.excludeRegion(region)
 		}
-		val result: SegmentationResult = region.getResult
-		result.dilateAndErode(dilateErodeConstant)
+		val result: SegmentationResult = selection.getResult
 		if (gt.isDefined)
-			decisions.foreach { case ((x, y), state, dec) => policy.update(state, dec, reward(x, y, result.doesContain(x, y), gt)) }
+			decisions.foreach { case (state, region, dec) => policy.update(state, dec, reward(region, dec.include, gt)) }
+		result.dilateAndErode(dilateErodeConstant)
 		result
 	}
 	
-	/**
-	  * This gives a positive reward for everything inside the GT and a negative one for things just
-	  * outside it. It gives no reward for things unrelated to the GT since we don't care about
-	  * these (we only want to avoid leaving the target area).
-	  */
-	def reward(x: Int, y: Int, decision: Boolean, gt: Option[SegmentationResult]): Int = {
+	def reward(region: WatershedRegion, decision: Boolean, gt: Option[SegmentationResult]): Int = {
 		if (gt.isEmpty) return 0
-		if (decision) gt.get.rewardChoosing(x, y)
-		else gt.get.rewardOmitting(x, y)
+		var reward: Int = 0
+		for ((x, y) <- region.pixels)
+			reward += gt.get.rewardChoosing(x, y)
+		if (reward == -region.pixels.size) return 0 // Ignore decisions on regions entierly outside goal
+		if (decision) reward
+		else -reward
 	}
 }

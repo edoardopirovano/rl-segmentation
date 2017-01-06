@@ -2,8 +2,6 @@ package org.edoardo.segmentation
 
 import java.io.{BufferedOutputStream, FileOutputStream}
 
-import org.edoardo.bitmap.RgbBitmap
-
 import scala.Array.ofDim
 
 class SegmentationResult(selected: Array[Array[Boolean]]) {
@@ -18,10 +16,8 @@ class SegmentationResult(selected: Array[Array[Boolean]]) {
 		for (i <- 0 until height; j <- 0 until width) {
 			if (manhattanDistanceToTarget(i)(j) == 0)
 				rewardChoosingArray.get(i)(j) = 1
-			else if (manhattanDistanceToTarget(i)(j) == 1)
-				rewardChoosingArray.get(i)(j) = -1000
 			else
-				rewardChoosingArray.get(i)(j) = 0
+				rewardChoosingArray.get(i)(j) = -1
 		}
 	}
 	
@@ -82,16 +78,6 @@ class SegmentationResult(selected: Array[Array[Boolean]]) {
 	def doesContain(x: Int, y: Int): Boolean = selected(y)(x)
 	
 	def headerPbm(height: Int, width: Int): String = "P1\n" + width + " " + height + "\n"
-	
-	def writeTo(fileName: String, img: RgbBitmap): Unit = {
-		val s = new BufferedOutputStream(new FileOutputStream(fileName))
-		s.write(headerPgm(height, width).getBytes)
-		for (y <- 0 until height; x <- 0 until width) {
-			if (doesContain(x, y)) s.write(img.getGrey(x, y).toByte)
-			else s.write(0.toByte)
-		}
-		s.close()
-	}
 	
 	def headerPgm(height: Int, width: Int): String = "P5\n" + width + " " + height + "\n255\n"
 }

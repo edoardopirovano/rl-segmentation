@@ -15,7 +15,7 @@ resolvers +=
 resolvers +=
     "Unidata Releases" at "https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases/"
 
-lazy val root = (project in file(".")).
+lazy val root: Project = (project in file(".")).
   settings(commonSettings: _*).
   settings(
     // set the name of the project
@@ -50,7 +50,12 @@ lazy val root = (project in file(".")).
       libraryDependencies += "net.imglib2" % "imglib2" % "3.2.1",
     
       // https://mvnrepository.com/artifact/net.imglib2/imglib2-algorithm
-      libraryDependencies += "net.imglib2" % "imglib2-algorithm" % "0.6.2"
+      libraryDependencies += "net.imglib2" % "imglib2-algorithm" % "0.6.2",
+    
+      // https://mvnrepository.com/artifact/net.imglib2/imglib2-ij
+      libraryDependencies += "net.imglib2" % "imglib2-ij" % "2.0.0-beta-35",
+    
+      // https://mvnrepository.com/artifact/io.scif/scifio
+      libraryDependencies += "io.scif" % "scifio" % "0.30.0"
 
-
-  )
+)
