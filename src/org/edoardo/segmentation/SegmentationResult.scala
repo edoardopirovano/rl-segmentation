@@ -1,6 +1,8 @@
 package org.edoardo.segmentation
 
-import java.io.{BufferedOutputStream, FileOutputStream}
+import ij.io.FileSaver
+import ij.{IJ, ImagePlus}
+import inra.ijpb.morphology.GeodesicReconstruction
 
 import scala.Array.ofDim
 
@@ -21,6 +23,27 @@ class SegmentationResult(selected: Array[Array[Boolean]]) {
 		}
 	}
 	
+	def rewardChoosing(x: Int, y: Int): Int = rewardChoosingArray.get(y)(x)
+	
+	def rewardOmitting(x: Int, y: Int): Int = -rewardChoosingArray.get(y)(x)
+	
+	def writeTo(fileName: String): Unit = {
+		val result: ImagePlus = IJ.createImage(fileName, "8-bit", width, height, 1)
+		for (y <- 0 until height) {
+			for (x <- 0 until width) {
+				if (doesContain(x, y))
+					result.getProcessor.putPixel(x, y, 255)
+				else
+					result.getProcessor.putPixel(x, y, 0)
+			}
+		}
+		val closedResult: ImagePlus = IJ.createImage(fileName, "8-bit", width, height, 1)
+		closedResult.setProcessor(GeodesicReconstruction.fillHoles(result.getProcessor))
+		new FileSaver(closedResult).saveAsPgm(fileName)
+	}
+	
+	def doesContain(x: Int, y: Int): Boolean = selected(y)(x)
+	
 	private def computeManhattan(isConverse: Boolean): Array[Array[Int]] = {
 		val manhattan: Array[Array[Int]] = ofDim[Int](height, width)
 		for (i <- 0 until height; j <- 0 until width) {
@@ -38,46 +61,4 @@ class SegmentationResult(selected: Array[Array[Boolean]]) {
 		}
 		manhattan
 	}
-	
-	def dilateAndErode(n: Int): Unit = {
-		dilate(n)
-		erode(n)
-	}
-	
-	// Pre: manhattanDistanceToSelected is set
-	def dilate(k: Int): Unit = {
-		val manhattanDistanceToSelected: Array[Array[Int]] = computeManhattan(false)
-		for (i <- 0 until height; j <- 0 until width; if manhattanDistanceToSelected(i)(j) <= k)
-			selected(i)(j) = true
-	}
-	
-	// Post: manhattanDistanceToSelected is not set
-	def erode(k: Int): Unit = {
-		val manhattanDistanceToNotSelected: Array[Array[Int]] = computeManhattan(true)
-		for (i <- 0 until height; j <- 0 until width; if manhattanDistanceToNotSelected(i)(j) <= k)
-			selected(i)(j) = false
-	}
-	
-	def rewardChoosing(x: Int, y: Int): Int = rewardChoosingArray.get(y)(x)
-	
-	def rewardOmitting(x: Int, y: Int): Int = -rewardChoosingArray.get(y)(x)
-	
-	def writeTo(fileName: String): Unit = {
-		val s = new BufferedOutputStream(new FileOutputStream(fileName))
-		s.write(headerPbm(height, width).getBytes)
-		for (y <- 0 until height) {
-			for (x <- 0 until width) {
-				if (doesContain(x, y)) s.write("0 ".getBytes)
-				else s.write("1 ".getBytes)
-			}
-			s.write("\n".getBytes)
-		}
-		s.close()
-	}
-	
-	def doesContain(x: Int, y: Int): Boolean = selected(y)(x)
-	
-	def headerPbm(height: Int, width: Int): String = "P1\n" + width + " " + height + "\n"
-	
-	def headerPgm(height: Int, width: Int): String = "P5\n" + width + " " + height + "\n255\n"
 }

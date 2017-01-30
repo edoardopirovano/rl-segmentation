@@ -3,7 +3,7 @@ lazy val commonSettings = Seq(
   organization := "org.edoardo",
   version := "1.0.0",
   // set the Scala version used for the project
-  scalaVersion := "2.10.6"
+  scalaVersion := "2.12.0"
 )
 
 resolvers +=
@@ -56,6 +56,11 @@ lazy val root: Project = (project in file(".")).
       libraryDependencies += "net.imglib2" % "imglib2-ij" % "2.0.0-beta-35",
     
       // https://mvnrepository.com/artifact/io.scif/scifio
-      libraryDependencies += "io.scif" % "scifio" % "0.30.0"
+      libraryDependencies += "io.scif" % "scifio" % "0.30.0",
+    
+      // https://mvnrepository.com/artifact/net.sf.ij-plugins/ijp-toolkit_2.12
+      libraryDependencies += "net.sf.ij-plugins" % "ijp-toolkit_2.12" % "2.1.0",
+    
+      libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.5"
 
 )
