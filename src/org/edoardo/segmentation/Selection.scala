@@ -1,49 +1,44 @@
 package org.edoardo.segmentation
 
-import org.edoardo.bitmap.{WatershedRegion, WrappedImage}
+import org.edoardo.bitmap.WrappedImage
+import org.edoardo.ipf.VolumeIPF
 
 import scala.collection.mutable
 
-class Selection(val height: Int, width: Int) {
-	
-	var toConsider: mutable.Set[WatershedRegion] = mutable.Set[WatershedRegion]()
-	val excluded: mutable.Set[WatershedRegion] = mutable.Set[WatershedRegion]()
-	val included: mutable.Set[WatershedRegion] = mutable.Set[WatershedRegion]()
+class Selection(val height: Int, width: Int, ipf: VolumeIPF) {
+	var toConsider: mutable.Set[Int] = mutable.Set[Int]()
+	val excluded: mutable.Set[Int] = mutable.Set[Int]()
+	val included: mutable.Set[Int] = mutable.Set[Int]()
 	
 	def completed(): Boolean = toConsider.isEmpty
 	
-	def getRegion: WatershedRegion = {
-		val result: WatershedRegion = toConsider.head
+	def getRegion: Int = {
+		val result: Int = toConsider.head
 		toConsider = toConsider.tail
 		result
 	}
 	
-	def includeRegion(region: WatershedRegion): Unit = {
+	def includeRegion(region: Int): Unit = {
 		included += region
-		for (neighbour <- region.neighbours) {
+		for (neighbour <- ipf.getNeighbours(region)) {
 			if (!excluded.contains(neighbour) && !included.contains(neighbour))
 				toConsider += neighbour
 		}
 	}
 	
-	def startPixel(x: Int, y: Int, img: WrappedImage): Unit = {
-		val neighborhood: List[(Int, Int)] = neighbours(x, y)
-		for ((a, b) <- neighborhood) {
-			if (img.getRegion(a, b).nonEmpty)
-				includeRegion(img.getRegion(a, b).get)
-		}
+	def startPixel(x: Int, y: Int, img: WrappedImage, layer: Int): Unit = {
+		val startRegions: List[Int] = ipf.getRegionsInLayer(layer, x, y, 0)
+		for (region <- startRegions)
+			includeRegion(region)
 	}
 	
-	private def neighbours(x: Int, y:Int) = List((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1),
-		(x + 1, y + 1), (x + 1, y - 1), (x - 1, y + 1), (x - 1, y - 1))
-	
-	def excludeRegion(region: WatershedRegion): Unit = {
+	def excludeRegion(region: Int): Unit = {
 		excluded += region
 	}
 	
 	def getResult: SegmentationResult = {
 		val status: Array[Array[Boolean]] = Array.fill(height) { Array.fill(width) { false } }
-		for ((x, y) <- included.flatMap(region => region.pixels ++ region.border))
+		for ((x, y) <- included.flatMap(region => ipf.getRegionPixels(region)))
 			status(y)(x) = true
 		new SegmentationResult(status)
 	}
