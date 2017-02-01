@@ -27,19 +27,27 @@ class SegmentationResult(selected: Array[Array[Boolean]]) {
 	
 	def rewardOmitting(x: Int, y: Int): Int = -rewardChoosingArray.get(y)(x)
 	
-	def writeTo(fileName: String): Unit = {
-		val result: ImagePlus = IJ.createImage(fileName, "8-bit", width, height, 1)
-		for (y <- 0 until height) {
-			for (x <- 0 until width) {
-				if (doesContain(x, y))
-					result.getProcessor.putPixel(x, y, 255)
-				else
-					result.getProcessor.putPixel(x, y, 0)
-			}
-		}
-		val closedResult: ImagePlus = IJ.createImage(fileName, "8-bit", width, height, 1)
+	def closeResult(): Unit = {
+		val result: ImagePlus = buildResult()
+		val closedResult: ImagePlus = IJ.createImage("closedResult", "8-bit", width, height, 1)
 		closedResult.setProcessor(GeodesicReconstruction.fillHoles(result.getProcessor))
-		new FileSaver(closedResult).saveAsPgm(fileName)
+		for (y <- 0 until height; x <- 0 until width)
+			selected(y)(x) = closedResult.getPixel(x, y)(0) == 255
+	}
+	
+	def buildResult(): ImagePlus = {
+		val result: ImagePlus = IJ.createImage("result", "8-bit", width, height, 1)
+		for (y <- 0 until height; x <- 0 until width) {
+			if (doesContain(x, y))
+				result.getProcessor.putPixel(x, y, 255)
+			else
+				result.getProcessor.putPixel(x, y, 0)
+		}
+		result
+	}
+	
+	def writeTo(fileName: String): Unit = {
+		new FileSaver(buildResult()).saveAsPgm(fileName)
 	}
 	
 	def doesContain(x: Int, y: Int): Boolean = selected(y)(x)

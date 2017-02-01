@@ -24,8 +24,12 @@ object RLSegmentation {
 		img.doPreProcess()
 		val ipf: VolumeIPF = IPF.loadFromFile(ipfName)
 		if (gt.isDefined) {
-			for (i <- 0 until numPracticeRuns)
-				analyseImage(img, ipf, gt, seed).writeTo(resultName.substring(0, resultName.length - 4) + "-" + i + ".pgm")
+			for (i <- 0 until numPracticeRuns) {
+				val result: SegmentationResult = analyseImage(img, ipf, gt, seed)
+				println(name.dropRight(4)  + "\t" + i + "\t" + score(result, gt.get))
+				result.closeResult()
+				result.writeTo(resultName.dropRight(4) + "-" + i + ".pgm")
+			}
 		}
 		analyseImage(img, ipf, None, seed).writeTo(resultName)
 	}
@@ -52,10 +56,9 @@ object RLSegmentation {
 			else
 				selection.excludeRegion(region)
 		}
-		val result: SegmentationResult = selection.getResult
 		if (gt.isDefined)
 			decisions.foreach { case (state, region, dec) => policy.update(state, dec, reward(region, dec.include, ipf, gt)) }
-		result
+		selection.getResult
 	}
 	
 	def reward(region: Int, decision: Boolean, ipf: VolumeIPF, gt: Option[SegmentationResult]): Int = {
@@ -64,8 +67,19 @@ object RLSegmentation {
 		var reward: Int = 0
 		for ((x, y) <- pixels)
 			reward += gt.get.rewardChoosing(x, y)
-		if (reward == -pixels.size) return 0 // Ignore decisions on regions entirely outside goal
 		if (decision) reward
 		else -reward
+	}
+	
+	def score(result: SegmentationResult, gt: SegmentationResult): Float = {
+		var overlap = 0
+		var resultSize = 0
+		var gtSize = 0
+		for (x <- 0 until result.width; y <- 0 until result.height) {
+			if (result.doesContain(x, y) && gt.doesContain(x, y)) overlap += 1
+			if (result.doesContain(x, y)) resultSize += 1
+			if (gt.doesContain(x, y)) gtSize += 1
+		}
+		(2f * overlap) / (gtSize + resultSize)
 	}
 }
