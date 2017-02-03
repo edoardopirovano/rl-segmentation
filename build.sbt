@@ -61,6 +61,9 @@ lazy val root: Project = (project in file(".")).
       // https://mvnrepository.com/artifact/net.sf.ij-plugins/ijp-toolkit_2.12
       libraryDependencies += "net.sf.ij-plugins" % "ijp-toolkit_2.12" % "2.1.0",
     
-      libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.5"
+      libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.5",
+    
+      // https://mvnrepository.com/artifact/com.google.guava/guava
+      libraryDependencies += "com.google.guava" % "guava" % "21.0"
 
-)
+  )

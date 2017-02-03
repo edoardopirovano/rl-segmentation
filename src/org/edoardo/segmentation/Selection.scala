@@ -5,7 +5,7 @@ import org.edoardo.ipf.VolumeIPF
 
 import scala.collection.mutable
 
-class Selection(val height: Int, width: Int, ipf: VolumeIPF) {
+class Selection(val height: Int, width: Int, depth: Int, ipf: VolumeIPF) {
 	var toConsider: mutable.Set[Int] = mutable.Set[Int]()
 	val excluded: mutable.Set[Int] = mutable.Set[Int]()
 	val included: mutable.Set[Int] = mutable.Set[Int]()
@@ -26,8 +26,8 @@ class Selection(val height: Int, width: Int, ipf: VolumeIPF) {
 		}
 	}
 	
-	def startPixel(x: Int, y: Int, img: WrappedImage, layer: Int): Unit = {
-		val startRegions: List[Int] = ipf.getRegionsInLayer(layer, x, y, 0)
+	def startPixel(x: Int, y: Int, z: Int, img: WrappedImage, layer: Int): Unit = {
+		val startRegions: List[Int] = ipf.getRegionsInLayer(layer, x, y, z)
 		for (region <- startRegions)
 			includeRegion(region)
 	}
@@ -37,9 +37,9 @@ class Selection(val height: Int, width: Int, ipf: VolumeIPF) {
 	}
 	
 	def getResult: SegmentationResult = {
-		val status: Array[Array[Boolean]] = Array.fill(height) { Array.fill(width) { false } }
-		for ((x, y) <- included.flatMap(region => ipf.getRegionPixels(region)))
-			status(y)(x) = true
+		val status: Array[Array[Array[Boolean]]] = Array.ofDim(width, height, depth)
+		for ((x, y, z) <- included.flatMap(region => ipf.getRegionPixels(region)))
+			status(x)(y)(z) = true
 		new SegmentationResult(status)
 	}
 	

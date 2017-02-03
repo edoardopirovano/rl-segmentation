@@ -10,8 +10,8 @@ case class Node(centroid: (Float, Float, Float), maxGrey: Int, meanGrey: Float, 
 				zMin: Int, xMax: Int, yMax: Int, zMax: Int, voxelCount: Int, children: List[Int], parent: Int)
 
 case class VolumeIPF(width: Int, height: Int, depth: Int, leafLayer: LeafLayer, branchLayers: List[BranchLayer]) {
-	def getRegionPixels(region: Int): List[(Int, Int)] = {
-		leafLayer.regionToPixels(region).map(p => (p._1, p._2))
+	def getRegionPixels(region: Int): List[(Int, Int, Int)] = {
+		leafLayer.regionToPixels(region)
 	}
 	
 	def getRegionsInLayer(layer: Int, x: Int, y: Int, z: Int): List[Int] = {
