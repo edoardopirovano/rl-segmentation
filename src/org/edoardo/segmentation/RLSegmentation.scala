@@ -6,20 +6,17 @@ import org.edoardo.ipf.{IPF, VolumeIPF}
 import org.edoardo.rl.Policy
 
 object RLSegmentation {
-	val epsilonReciprocal = 10
-	val dilateErodeConstant = 3
+	val epsilonReciprocal = 20
 	
 	val policy = new Policy[Decision, RegionInfo]
 	
 	def main(args: Array[String]): Unit = {
-		for (i <- List(1, 11))
-			doImage("Knee" + i + "_0010.pgm", "knee" + i + ".ipf", "knee" + i + "result.tiff", (250, 180, 0), Some("Knee" + i + "_0010-gt.pgm"))
-		doImage("Knee10_0010.pgm", "knee10.ipf", "knee10result.tiff", (250, 180, 0))
+		doImage("image-001.mhd", "image-001.ipf", "image-001.tiff", (134,112,38), Some("labels-001.mhd"), 100)
 	}
 	
 	def doImage(name: String, ipfName: String, resultName: String, seed: (Int, Int, Int), gtName: Option[String] = None, numPracticeRuns: Int = 40): Unit = {
 		val img: WrappedImage = new WrappedImage(if (name.takeRight(3) == "mhd") Raw.openImage(name) else IJ.openImage(name))
-		val gt: Option[SegmentationResult] = gtName.map(name => new WrappedImage(IJ.openImage(name)).toSegmentationResult)
+		val gt: Option[SegmentationResult] = gtName.map(name => new WrappedImage(if (name.takeRight(3) == "mhd") Raw.openLabels(name) else IJ.openImage(name)).toSegmentationResult)
 		img.doPreProcess()
 		val ipf: VolumeIPF = IPF.loadFromFile(ipfName)
 		if (gt.isDefined) {
@@ -34,13 +31,14 @@ object RLSegmentation {
 	
 	def getInfo(pixels: List[(Int, Int, Int)], img: WrappedImage): RegionInfo = {
 		val avgIntensity: Int = pixels.map(p => img.getVoxel(p._1, p._2, p._3)).sum / pixels.size
+		val maxIntensity: Int = pixels.map(p => img.getVoxel(p._1, p._2, p._3)).max
 		val maxGradient: Int = pixels.map(p => img.getGradient(p._1, p._2, p._3)).max
-		RegionInfo(avgIntensity, maxGradient)
+		RegionInfo(avgIntensity, maxIntensity, maxGradient)
 	}
 	
 	def analyseImage(img: WrappedImage, ipf: VolumeIPF, gt: Option[SegmentationResult], seed: (Int, Int, Int)): SegmentationResult = {
 		if (gt.isDefined)
-			assert(img.width == gt.get.width && img.height == gt.get.height)
+			assert(img.width == gt.get.width && img.height == gt.get.height && img.depth == gt.get.depth)
 		val selection = new Selection(img.height, img.width, img.depth, ipf)
 		var decisions: List[(RegionInfo, Int, Decision)] = List()
 		selection.startPixel(seed._1, seed._2, seed._3, img, if (gt.isDefined) 1 else 3)

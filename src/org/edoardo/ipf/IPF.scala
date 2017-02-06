@@ -29,8 +29,16 @@ case class VolumeIPF(width: Int, height: Int, depth: Int, leafLayer: LeafLayer, 
 		region
 	}
 	
+	def isOnBorder(r: Int): Boolean = {
+		for ((x, y, z) <- getRegionPixels(r)) {
+			if (x == 0 || y == 0 || x == width || y == height)
+				return true
+		}
+		false
+	}
+	
 	def getNeighbours(region: Int): List[Int] = {
-		branchLayers.last.edges(region).map(edge => edge._1)
+		branchLayers.last.edges(region).map(edge => edge._1).filter(r => !isOnBorder(r))
 	}
 }
 
@@ -124,7 +132,7 @@ object IPF {
 				val properties: Array[String] = line.drop(1).dropRight(1).split("\\|")
 				val parent: Int = readLine.toInt
 				pixelProperties(x)(y).update(z, PixelProperties(properties(0).toInt, properties(1).toInt, properties(2).toInt, parent))
-				parentRegionToPixels.put(parent, (x,y,z) :: parentRegionToPixels.getOrElseUpdate(parent, List()))
+				parentRegionToPixels.put(parent, (x, y, z) :: parentRegionToPixels.getOrElseUpdate(parent, List()))
 				x += 1
 				if (x == sizeX) {
 					x = 0

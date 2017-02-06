@@ -6,23 +6,26 @@ import org.edoardo.ipf.VolumeIPF
 import scala.collection.mutable
 
 class Selection(val height: Int, width: Int, depth: Int, ipf: VolumeIPF) {
-	var toConsider: mutable.Set[Int] = mutable.Set[Int]()
+	val toConsider: mutable.Set[Int] = mutable.Set[Int]()
+	var toConsiderQueue: mutable.Queue[Int] = mutable.Queue[Int]()
 	val excluded: mutable.Set[Int] = mutable.Set[Int]()
 	val included: mutable.Set[Int] = mutable.Set[Int]()
 	
 	def completed(): Boolean = toConsider.isEmpty
 	
 	def getRegion: Int = {
-		val result: Int = toConsider.head
-		toConsider = toConsider.tail
+		val result: Int = toConsiderQueue.dequeue()
+		toConsider.remove(result)
 		result
 	}
 	
 	def includeRegion(region: Int): Unit = {
 		included += region
 		for (neighbour <- ipf.getNeighbours(region)) {
-			if (!excluded.contains(neighbour) && !included.contains(neighbour))
-				toConsider += neighbour
+			if (!excluded.contains(neighbour) && !included.contains(neighbour)) {
+				if (toConsider.add(neighbour))
+					toConsiderQueue.enqueue(neighbour)
+			}
 		}
 	}
 	

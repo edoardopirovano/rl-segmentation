@@ -3,6 +3,7 @@ package org.edoardo.bitmap
 import java.io.{BufferedInputStream, FileInputStream}
 
 import com.google.common.io.LittleEndianDataInputStream
+import ij.process.ImageProcessor
 import ij.{IJ, ImagePlus}
 
 object Raw {
@@ -37,13 +38,15 @@ object Raw {
 		val (width, height, depth, dataFile) = readMetadata(name)
 		implicit val in = new LittleEndianDataInputStream(new BufferedInputStream(new FileInputStream(dataFile)))
 		val labels: ImagePlus = IJ.createImage(name, "8-bit", width, height, depth)
-		for (z <- 0 until depth) {
+		for (z <- 1 to depth) {
+			labels.setZ(z)
+			val processor: ImageProcessor = labels.getProcessor
 			for (y <- 0 until height) {
-				for (x <- 0 until width) {
-					labels.getProcessor.putPixel(x, y, in.readByte())
-				}
+				for (x <- 0 until width)
+					processor.putPixel(x, y, if (in.readByte() == 1) 255 else 0)
 			}
 		}
+		labels.show()
 		labels
 	}
 	

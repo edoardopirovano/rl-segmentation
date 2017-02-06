@@ -39,7 +39,7 @@ class WrappedImage(val image: ImagePlus) {
 	def contains(x: Int, y: Int): Boolean = x >= 0 && y >= 0 && x < width && y < height
 	
 	def toSegmentationResult: SegmentationResult = {
-		val result: Array[Array[Array[Boolean]]] = ofDim[Boolean](height, width, depth)
+		val result: Array[Array[Array[Boolean]]] = ofDim[Boolean](width, height, depth)
 		for (x <- 0 until width; y <- 0 until height; z <- 0 until depth)
 			result(x)(y)(z) = getVoxel(x, y, z).equals(255)
 		new SegmentationResult(result)
