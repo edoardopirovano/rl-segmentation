@@ -4,19 +4,22 @@ import ij.IJ
 import org.edoardo.bitmap.{Raw, WrappedImage}
 import org.edoardo.ipf.{IPF, VolumeIPF}
 import org.edoardo.rl.Policy
+import scala.collection.mutable
 
 object RLSegmentation {
-	val epsilonReciprocal = 20
+	val epsilonReciprocal = 10
 	
 	val policy = new Policy[Decision, RegionInfo]
 	
 	def main(args: Array[String]): Unit = {
-		doImage("image-001.mhd", "image-001.ipf", "image-001.tiff", (134,112,38), Some("labels-001.mhd"), 100)
+		doImage("image-001.mhd", "image-001-3d.ipf", "image-001.tiff", (134,112,38), Some("labels-001.mhd"), 20)
 	}
 	
 	def doImage(name: String, ipfName: String, resultName: String, seed: (Int, Int, Int), gtName: Option[String] = None, numPracticeRuns: Int = 40): Unit = {
 		val img: WrappedImage = new WrappedImage(if (name.takeRight(3) == "mhd") Raw.openImage(name) else IJ.openImage(name))
 		val gt: Option[SegmentationResult] = gtName.map(name => new WrappedImage(if (name.takeRight(3) == "mhd") Raw.openLabels(name) else IJ.openImage(name)).toSegmentationResult)
+		if (gt.isDefined)
+			gt.get.writeTo(resultName.dropRight(5) + "-gt.tiff")
 		img.doPreProcess()
 		val ipf: VolumeIPF = IPF.loadFromFile(ipfName)
 		if (gt.isDefined) {
@@ -27,13 +30,20 @@ object RLSegmentation {
 			}
 		}
 		analyseImage(img, ipf, None, seed).writeTo(resultName)
+		regionInfoCache.clear()
 	}
 	
-	def getInfo(pixels: List[(Int, Int, Int)], img: WrappedImage): RegionInfo = {
-		val avgIntensity: Int = pixels.map(p => img.getVoxel(p._1, p._2, p._3)).sum / pixels.size
-		val maxIntensity: Int = pixels.map(p => img.getVoxel(p._1, p._2, p._3)).max
-		val maxGradient: Int = pixels.map(p => img.getGradient(p._1, p._2, p._3)).max
-		RegionInfo(avgIntensity, maxIntensity, maxGradient)
+	val regionInfoCache: mutable.Map[Int, RegionInfo] = mutable.Map.empty
+	
+	def getInfo(region: Int, ipf: VolumeIPF, img: WrappedImage): RegionInfo = {
+		regionInfoCache.getOrElseUpdate(region, {
+			val pixels: List[(Int, Int, Int)] = ipf.getRegionPixels(region)
+			val avgIntensity: Int = pixels.map(p => img.getVoxel(p._1, p._2, p._3)).sum / pixels.size
+			//		val minIntensity: Int = pixels.map(p => img.getVoxel(p._1, p._2, p._3)).min
+			val maxIntensity: Int = pixels.map(p => img.getVoxel(p._1, p._2, p._3)).max
+			val maxGradient: Int = pixels.map(p => img.getGradient(p._1, p._2, p._3)).max
+			RegionInfo(avgIntensity, maxIntensity, maxGradient)
+		})
 	}
 	
 	def analyseImage(img: WrappedImage, ipf: VolumeIPF, gt: Option[SegmentationResult], seed: (Int, Int, Int)): SegmentationResult = {
@@ -41,10 +51,10 @@ object RLSegmentation {
 			assert(img.width == gt.get.width && img.height == gt.get.height && img.depth == gt.get.depth)
 		val selection = new Selection(img.height, img.width, img.depth, ipf)
 		var decisions: List[(RegionInfo, Int, Decision)] = List()
-		selection.startPixel(seed._1, seed._2, seed._3, img, if (gt.isDefined) 1 else 3)
+		selection.startPixel(seed._1, seed._2, seed._3, img, 2)
 		while (!selection.completed()) {
 			val region: Int = selection.getRegion
-			val state: RegionInfo = getInfo(ipf.getRegionPixels(region), img)
+			val state: RegionInfo = getInfo(region, ipf, img)
 			val decision: Decision = if (gt.isEmpty) policy.greedyPlay(state) else policy.epsilonSoft(state, epsilonReciprocal)
 			decisions ::= (state, region, decision)
 			if (decision.include)

@@ -19,7 +19,6 @@ class WrappedImage(val image: ImagePlus) {
 		(0 until dimensions).map(dir => gradientProcessors(dir)(z).getPixel(x, y)).max
 	}
 	
-	val debug = true
 	val wrapped: Img[UnsignedByteType] = ImageJFunctions.wrapByte(image)
 	
 	new ImageConverter(image).convertToGray8()
@@ -54,6 +53,5 @@ class WrappedImage(val image: ImagePlus) {
 		gradientProcessors = (0 until dimensions).map(dir => {
 			(0 until depth).map(z => gradientImage.getImageStack.getProcessor((dir * depth) + z + 1)).toArray
 		}).toArray
-		if (debug) gradientImage.show()
 	}
 }

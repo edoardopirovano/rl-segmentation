@@ -29,16 +29,8 @@ case class VolumeIPF(width: Int, height: Int, depth: Int, leafLayer: LeafLayer, 
 		region
 	}
 	
-	def isOnBorder(r: Int): Boolean = {
-		for ((x, y, z) <- getRegionPixels(r)) {
-			if (x == 0 || y == 0 || x == width || y == height)
-				return true
-		}
-		false
-	}
-	
 	def getNeighbours(region: Int): List[Int] = {
-		branchLayers.last.edges(region).map(edge => edge._1).filter(r => !isOnBorder(r))
+		branchLayers.last.edges(region).map(edge => edge._1)
 	}
 }
 
