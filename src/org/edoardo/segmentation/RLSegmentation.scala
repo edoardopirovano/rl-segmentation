@@ -12,7 +12,10 @@ object RLSegmentation {
 	val policy = new Policy[Decision, RegionInfo]
 	
 	def main(args: Array[String]): Unit = {
-		doImage("image-001.mhd", "image-001-3d.ipf", "image-001.tiff", (134,112,38), Some("labels-001.mhd"), 20)
+		doImage("image-004.mhd", "image004.ipf", "image-004.tiff", (134,112,38), Some("labels-004.mhd"), 0)
+		for (i <- List(1,2))
+			doImage("image-00" + i + ".mhd", "image00" + i + ".ipf", "image-00" + i + ".tiff", (134,112,38), Some("labels-00" + i + ".mhd"), 20)
+		doImage("image-004.mhd", "image004.ipf", "image-004.tiff", (134,112,38), Some("labels-004.mhd"), 0)
 	}
 	
 	def doImage(name: String, ipfName: String, resultName: String, seed: (Int, Int, Int), gtName: Option[String] = None, numPracticeRuns: Int = 40): Unit = {
@@ -29,7 +32,10 @@ object RLSegmentation {
 				result.writeTo(resultName.dropRight(5) + "-" + i + ".tiff")
 			}
 		}
-		analyseImage(img, ipf, None, seed).writeTo(resultName)
+		val result: SegmentationResult = analyseImage(img, ipf, None, seed)
+		if (gt.isDefined)
+			println(name.dropRight(4)  + "\tfinal\t" + score(result, gt.get))
+		result.writeTo(resultName)
 		regionInfoCache.clear()
 	}
 	
@@ -40,9 +46,9 @@ object RLSegmentation {
 			val pixels: List[(Int, Int, Int)] = ipf.getRegionPixels(region)
 			val avgIntensity: Int = pixels.map(p => img.getVoxel(p._1, p._2, p._3)).sum / pixels.size
 			//		val minIntensity: Int = pixels.map(p => img.getVoxel(p._1, p._2, p._3)).min
-			val maxIntensity: Int = pixels.map(p => img.getVoxel(p._1, p._2, p._3)).max
+			//			val maxIntensity: Int = pixels.map(p => img.getVoxel(p._1, p._2, p._3)).max
 			val maxGradient: Int = pixels.map(p => img.getGradient(p._1, p._2, p._3)).max
-			RegionInfo(avgIntensity, maxIntensity, maxGradient)
+			RegionInfo(avgIntensity, maxGradient)
 		})
 	}
 	

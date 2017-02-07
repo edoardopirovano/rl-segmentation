@@ -27,7 +27,6 @@ object Raw {
 			for (x <- 0 until width; y <- 0 until height)
 				windowed.getProcessor.putPixel(x, y, 127 + Math.round(255 * ((unwindowed.getPixel(x, y)(0) - windowC).toFloat / windowW)))
 		}
-		windowed.show()
 		windowed
 	}
 	
