@@ -33,7 +33,9 @@ class Policy[A <: Action, S <: State[A]] {
 	  * @param epsilonReciprocal The reciprocal of epsilon that we want.
 	  * @return The action chosen.
 	  */
-	def epsilonSoft(state: S, epsilonReciprocal: Int): A = if (Random.nextInt(epsilonReciprocal) == 0) randomPlay(state) else greedyPlay(state)
+	def epsilonSoft(state: S, epsilonReciprocal: Int): A =
+		if (Random.nextInt(epsilonReciprocal) == 0) randomPlay(state)
+		else greedyPlay(state)
 	
 	def weakeningEpsilonSoft(state: S, epsilonReciprocal: Int): A = {
 		val adjustedEpsilon: Long = epsilonReciprocal * (1 + timesStateSeen(state))

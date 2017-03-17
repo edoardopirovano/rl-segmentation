@@ -1,15 +1,16 @@
 package org.edoardo.segmentation
 
 import org.edoardo.bitmap.WrappedImage
-import org.edoardo.ipf.VolumeIPF
+import org.edoardo.parser.VolumeIPF
 
 import scala.collection.mutable
 
-class Selection(val height: Int, width: Int, depth: Int, ipf: VolumeIPF) {
+class Selection(val height: Int, width: Int, depth: Int, ipf: VolumeIPF, stayInLayer: Boolean) {
 	val toConsider: mutable.Set[Int] = mutable.Set[Int]()
 	var toConsiderQueue: mutable.Queue[Int] = mutable.Queue[Int]()
 	val excluded: mutable.Set[Int] = mutable.Set[Int]()
 	val included: mutable.Set[Int] = mutable.Set[Int]()
+	var firstZ: Int = -1
 	
 	def completed(): Boolean = toConsider.isEmpty
 	
@@ -23,7 +24,7 @@ class Selection(val height: Int, width: Int, depth: Int, ipf: VolumeIPF) {
 		included += region
 		for (neighbour <- ipf.getNeighbours(region)) {
 			if (!excluded.contains(neighbour) && !included.contains(neighbour)) {
-				if (toConsider.add(neighbour))
+				if (!(stayInLayer && ipf.getZ(region) != firstZ) && toConsider.add(neighbour))
 					toConsiderQueue.enqueue(neighbour)
 			}
 		}
@@ -31,6 +32,7 @@ class Selection(val height: Int, width: Int, depth: Int, ipf: VolumeIPF) {
 	
 	def startPixel(x: Int, y: Int, z: Int, img: WrappedImage, layer: Int): Unit = {
 		val startRegions: List[Int] = ipf.getRegionsInLayer(layer, x, y, z)
+		firstZ = z
 		for (region <- startRegions)
 			includeRegion(region)
 	}

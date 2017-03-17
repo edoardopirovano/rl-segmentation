@@ -1,4 +1,4 @@
-package org.edoardo.ipf
+package org.edoardo.parser
 
 import java.io.{BufferedInputStream, FileInputStream, InputStream}
 
@@ -12,6 +12,17 @@ case class Node(centroid: (Float, Float, Float), maxGrey: Int, meanGrey: Float, 
 case class VolumeIPF(width: Int, height: Int, depth: Int, leafLayer: LeafLayer, branchLayers: List[BranchLayer]) {
 	def getRegionPixels(region: Int): List[(Int, Int, Int)] = {
 		leafLayer.regionToPixels(region)
+	}
+	
+	def getRegionPixels(layer: Int, region: Int): List[(Int, Int, Int)] = {
+		var regions: List[Int] = List(region)
+		for (i <- 0 until (layer - 1)) {
+			var newRegions: List[Int] = List()
+			for (region <- regions)
+				newRegions = newRegions ++ branchLayers(branchLayers.length - layer + i).nodes(region).children
+			regions = newRegions
+		}
+		regions.flatMap(region => getRegionPixels(region))
 	}
 	
 	def getRegionsInLayer(layer: Int, x: Int, y: Int, z: Int): List[Int] = {
@@ -32,6 +43,10 @@ case class VolumeIPF(width: Int, height: Int, depth: Int, leafLayer: LeafLayer, 
 	def getNeighbours(region: Int): List[Int] = {
 		branchLayers.last.edges(region).map(edge => edge._1)
 	}
+	
+	def getZ(region: Int): Int = {
+		getRegionPixels(region).head._3
+	}
 }
 
 case class LeafLayer(sizeX: Int, sizeY: Int, sizeZ: Int, pixelInfo: Array[Array[Array[PixelProperties]]],
@@ -39,7 +54,7 @@ case class LeafLayer(sizeX: Int, sizeY: Int, sizeZ: Int, pixelInfo: Array[Array[
 
 case class BranchLayer(nodes: mutable.Map[Int, Node], edges: mutable.Map[Int, List[(Int, Int)]])
 
-object IPF {
+object IPF extends Parser {
 	def loadFromFile(fileName: String): VolumeIPF = {
 		implicit val in = new BufferedInputStream(new FileInputStream(fileName))
 		checkLineIs("VolumeIPF")
@@ -81,9 +96,10 @@ object IPF {
 					else children ::= innerLine.toInt
 				}
 				val parent: Int = readLine.toInt
-				nodes.put(node, Node((centroid(0).toFloat, centroid(1).toFloat, centroid(2).toFloat), properties(1).toInt,
-					properties(2).toFloat, properties(3).toInt, properties(4).toInt, properties(5).toInt, properties(6).toInt,
-					properties(7).toInt, properties(8).toInt, properties(9).toInt, properties(10).toInt, children, parent))
+				nodes.put(node, Node((centroid(0).toFloat, centroid(1).toFloat, centroid(2).toFloat),
+					properties(1).toInt, properties(2).toFloat, properties(3).toInt, properties(4).toInt,
+					properties(5).toInt, properties(6).toInt, properties(7).toInt, properties(8).toInt,
+					properties(9).toInt, properties(10).toInt, children, parent))
 			}
 		}
 		
@@ -95,8 +111,10 @@ object IPF {
 			else {
 				val split: Array[String] = line.drop(1).dropRight(1).split(", ")
 				val fromAndTo: Array[String] = split(0).drop(1).dropRight(1).split(" ")
-				edges.put(fromAndTo(0).toInt, (fromAndTo(1).toInt, split(1).toInt) :: edges.getOrElseUpdate(fromAndTo(0).toInt, List()))
-				edges.put(fromAndTo(1).toInt, (fromAndTo(0).toInt, split(1).toInt) :: edges.getOrElseUpdate(fromAndTo(1).toInt, List()))
+				edges.put(fromAndTo(0).toInt,
+					(fromAndTo(1).toInt, split(1).toInt) :: edges.getOrElseUpdate(fromAndTo(0).toInt, List()))
+				edges.put(fromAndTo(1).toInt,
+					(fromAndTo(0).toInt, split(1).toInt) :: edges.getOrElseUpdate(fromAndTo(1).toInt, List()))
 			}
 		}
 		
@@ -123,7 +141,8 @@ object IPF {
 			else {
 				val properties: Array[String] = line.drop(1).dropRight(1).split("\\|")
 				val parent: Int = readLine.toInt
-				pixelProperties(x)(y).update(z, PixelProperties(properties(0).toInt, properties(1).toInt, properties(2).toInt, parent))
+				pixelProperties(x)(y).update(z,
+					PixelProperties(properties(0).toInt, properties(1).toInt, properties(2).toInt, parent))
 				parentRegionToPixels.put(parent, (x, y, z) :: parentRegionToPixels.getOrElseUpdate(parent, List()))
 				x += 1
 				if (x == sizeX) {
@@ -138,23 +157,6 @@ object IPF {
 		}
 		
 		LeafLayer(sizeX, sizeY, sizeZ, pixelProperties, parentRegionToPixels)
-	}
-	
-	private def checkLineIs(value: String)(implicit in: InputStream): Unit = {
-		val line: String = readLine
-		if (line != value)
-			throw new IllegalArgumentException("File is not a valid IPF: Expected " +
-				value + " but got " + line)
-	}
-	
-	private def readLine(implicit in: InputStream): String = {
-		var out = ""
-		var b: Int = in.read
-		while (b != 0xA) {
-			out += b.toChar
-			b = in.read
-		}
-		out
 	}
 }
 

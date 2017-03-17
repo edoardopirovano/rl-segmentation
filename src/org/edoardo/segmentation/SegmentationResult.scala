@@ -1,6 +1,7 @@
 package org.edoardo.segmentation
 
 import ij.io.FileSaver
+import ij.process.ImageProcessor
 import ij.{IJ, ImagePlus}
 import inra.ijpb.morphology.{GeodesicReconstruction, GeodesicReconstruction3D}
 
@@ -29,11 +30,12 @@ class SegmentationResult(selected: Array[Array[Array[Boolean]]]) {
 		val result: ImagePlus = IJ.createImage("result", "8-bit", width, height, depth)
 		for (z <- 1 to depth) {
 			result.setZ(z)
+			val processor: ImageProcessor = result.getProcessor
 			for (y <- 0 until height; x <- 0 until width) {
 				if (doesContain(x, y, z - 1))
-					result.getProcessor.putPixel(x, y, 255)
+					processor.putPixel(x, y, 255)
 				else
-					result.getProcessor.putPixel(x, y, 0)
+					processor.putPixel(x, y, 0)
 			}
 		}
 		result

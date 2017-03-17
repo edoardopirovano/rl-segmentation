@@ -4,6 +4,6 @@ import org.edoardo.rl.{Action, State}
 
 case class Decision(include: Boolean) extends Action
 
-case class RegionInfo(avgIntensity: Int, maxGradient: Int) extends State[Decision] {
+case class RegionInfo(info: List[Int]) extends State[Decision] {
 	override def getAll: List[Decision] = List(Decision(true), Decision(false))
 }
