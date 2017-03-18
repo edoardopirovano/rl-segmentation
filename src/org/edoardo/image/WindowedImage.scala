@@ -14,11 +14,12 @@ import org.edoardo.segmentation.SegmentationResult
 
 import scala.Array.ofDim
 
-class WrappedImage(val originalImage: ImagePlus, val windowing: (Int, Int) = (0, 0)) {
-	def getGradient(x: Int, y: Int, z: Int): Int = {
-		(0 until dimensions).map(dir => gradientProcessors(dir)(z).getPixel(x, y)).max
-	}
-	
+/**
+  * A class storing a windowed image and providing some operations on it.
+  * @param originalImage the original image
+  * @param windowing the windowing to apply in the form of (centre, width) or (0,0) to not perform windowing
+  */
+class WindowedImage(val originalImage: ImagePlus, val windowing: (Int, Int) = (0, 0)) {
 	val width: Int = originalImage.getWidth
 	val height: Int = originalImage.getHeight
 	val depth: Int = originalImage.getDimensions()(3)
@@ -43,14 +44,28 @@ class WrappedImage(val originalImage: ImagePlus, val windowing: (Int, Int) = (0,
 	val processors: Array[ImageProcessor] = (0 until depth).map(z => image.getImageStack.getProcessor(z + 1)).toArray
 	var gradientProcessors: Array[Array[ImageProcessor]] = _
 	
+	/**
+	  * Get the intensity of a given voxel.
+	  * @param x the x coordinate of the voxel
+	  * @param y the y coordinate of the voxel
+	  * @param z the z coordinate of the voxel
+	  * @return the intensity at (x, y, z)
+	  */
 	def getVoxel(x: Int, y: Int, z: Int): Int = processors(z).getPixel(x, y)
 	
+	/**
+	  * Do any required preprocessing on the image before it can be used.
+	  */
 	def doPreProcess(): Unit = {
 		computeGradientImage()
 	}
 	
-	def contains(x: Int, y: Int): Boolean = x >= 0 && y >= 0 && x < width && y < height
-	
+	/**
+	  * Convert this image (with white representing voxels chosen, and black representing voxels not chosen) to a
+	  * segmentation result.
+	  * @param stayInLayer the layer to remain in, or -1 to consider every layer
+	  * @return a segmentation result corresponding to convering this image
+	  */
 	def toSegmentationResult(stayInLayer: Int): SegmentationResult = {
 		if (stayInLayer == -1) {
 			val result: Array[Array[Array[Boolean]]] = ofDim[Boolean](width, height, depth)
@@ -63,6 +78,17 @@ class WrappedImage(val originalImage: ImagePlus, val windowing: (Int, Int) = (0,
 				result(x)(y)(0) = getVoxel(x, y, stayInLayer).equals(255)
 			new SegmentationResult(result)
 		}
+	}
+	
+	/**
+	  * Get the maximum of the two (or three) gradients at a given point in the image.
+	  * @param x the x coordinate of the point
+	  * @param y the y coordinate of the point
+	  * @param z the z coordinate of the point
+	  * @return the maximum gradient in any direction at the given point
+	  */
+	def getGradient(x: Int, y: Int, z: Int): Int = {
+		(0 until dimensions).map(dir => gradientProcessors(dir)(z).getPixel(x, y)).max
 	}
 	
 	private def computeGradientImage(): Unit = {

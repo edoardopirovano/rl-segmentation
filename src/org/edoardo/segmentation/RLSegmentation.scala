@@ -5,7 +5,7 @@ import java.io.File
 import ij.IJ
 import ij.io.{FileSaver, Opener}
 import ij.plugin.FolderOpener
-import org.edoardo.image.{Raw, WrappedImage}
+import org.edoardo.image.{Raw, WindowedImage}
 import org.edoardo.parser.{IPF, MFS, VolumeIPF}
 import org.edoardo.rl.Policy
 
@@ -117,7 +117,7 @@ object RLSegmentation {
 	  */
 	def doImage(name: String, ipfName: String, resultName: String, seed: (Int, Int, Int), windowing: (Int, Int) = (0, 0),
 				gtName: Option[String] = None, stayInLayer: Integer = -1, numPracticeRuns: Int = 40): Unit = {
-		val img: WrappedImage = new WrappedImage(
+		val img: WindowedImage = new WindowedImage(
 			if (name.takeRight(3) == "mhd")
 				Raw.openMetadata(name, stayInLayer + 1)
 			else if (new File(name).isDirectory)
@@ -129,7 +129,7 @@ object RLSegmentation {
 				if (name.takeRight(3) == "mfs")
 					MFS.loadFromFile(name, ipf)
 				else
-					new WrappedImage(
+					new WindowedImage(
 						if (name.takeRight(3) == "mhd")
 							Raw.openLabels(name)
 						else opener.openImage(name)
@@ -158,7 +158,7 @@ object RLSegmentation {
 	  * @param img the image we are considering
 	  * @return the information to be used by the agent to decide whether or not to include this region
 	  */
-	def getInfo(region: Int, ipf: VolumeIPF, img: WrappedImage): RegionInfo = {
+	def getInfo(region: Int, ipf: VolumeIPF, img: WindowedImage): RegionInfo = {
 		regionInfoCache.getOrElseUpdate(region, {
 			val pixels: List[(Int, Int, Int)] = ipf.getRegionPixels(region)
 			val avgIntensity: Int = pixels.map(p => img.getVoxel(p._1, p._2, p._3)).sum / pixels.size
@@ -179,7 +179,7 @@ object RLSegmentation {
 	  * @param stayInLayer whether or not to remain in the same layer
 	  * @return the result of segmenting the image
 	  */
-	def analyseImage(img: WrappedImage, ipf: VolumeIPF, gt: Option[SegmentationResult], seed: (Int, Int, Int),
+	def analyseImage(img: WindowedImage, ipf: VolumeIPF, gt: Option[SegmentationResult], seed: (Int, Int, Int),
 					 stayInLayer: Boolean): SegmentationResult = {
 		if (gt.isDefined)
 			assert(img.width == gt.get.width && img.height == gt.get.height && img.depth == gt.get.depth)
