@@ -1,4 +1,4 @@
-package org.edoardo.bitmap
+package org.edoardo.image
 
 import ij.process.ImageProcessor
 import ij.{IJ, ImagePlus}

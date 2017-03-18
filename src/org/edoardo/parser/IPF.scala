@@ -4,16 +4,52 @@ import java.io.{BufferedInputStream, FileInputStream, InputStream}
 
 import scala.collection.mutable
 
+/**
+  * Describes a pixel (leaf node) of the IPF.
+  */
 case class PixelProperties(baseValue: Int, gradientMagnitude: Int, greyValue: Int, parent: Int)
 
+/**
+  * Describes a branch node of the IPF.
+  */
 case class Node(centroid: (Float, Float, Float), maxGrey: Int, meanGrey: Float, minGrey: Int, xMin: Int, yMin: Int,
 				zMin: Int, xMax: Int, yMax: Int, zMax: Int, voxelCount: Int, children: List[Int], parent: Int)
 
+/**
+  * Describes the leaf layer of an IPF.
+  */
+case class LeafLayer(sizeX: Int, sizeY: Int, sizeZ: Int, pixelInfo: Array[Array[Array[PixelProperties]]],
+					 regionToPixels: mutable.Map[Int, List[(Int, Int, Int)]])
+
+/**
+  * Describes a branch layer of an IPF.
+  */
+case class BranchLayer(nodes: mutable.Map[Int, Node], edges: mutable.Map[Int, List[(Int, Int)]])
+
+/**
+  * Describes an IPF and contains helper methods for accessing useful properties of it.
+  * @param width the width of the image
+  * @param height the height of the image
+  * @param depth the depth of the image
+  * @param leafLayer the leaf layer of the IPF
+  * @param branchLayers the branch layers of the IPF
+  */
 case class VolumeIPF(width: Int, height: Int, depth: Int, leafLayer: LeafLayer, branchLayers: List[BranchLayer]) {
+	/**
+	  * Get all pixels in a region, which is assumed to be in the first branch layer.
+	  * @param region the identifier for the region
+	  * @return a list of pixels in the region
+	  */
 	def getRegionPixels(region: Int): List[(Int, Int, Int)] = {
 		leafLayer.regionToPixels(region)
 	}
 	
+	/**
+	  * Get all pixels in a region, in the given layer
+	  * @param layer the layer of the IPF the region is in
+	  * @param region the identifier for the region
+	  * @return a list of pixels in the region
+	  */
 	def getRegionPixels(layer: Int, region: Int): List[(Int, Int, Int)] = {
 		var regions: List[Int] = List(region)
 		for (i <- 0 until (layer - 1)) {
@@ -25,6 +61,15 @@ case class VolumeIPF(width: Int, height: Int, depth: Int, leafLayer: LeafLayer, 
 		regions.flatMap(region => getRegionPixels(region))
 	}
 	
+	/**
+	  * For a given seed point and layer, find the corresponding region and then return a list of all layer 1 children
+	  * of this seed region (used to initialise a selection).
+	  * @param layer the layer to look in
+	  * @param x the x coordinate of the seed
+	  * @param y the y coordinate of the seed
+	  * @param z the z coordinate of the seed
+	  * @return a list of layer 1 children of the selected seed reigon
+	  */
 	def getRegionsInLayer(layer: Int, x: Int, y: Int, z: Int): List[Int] = {
 		if (layer == 1) return List(leafLayer.pixelInfo(x)(y)(z).parent)
 		var regions: List[Int] = getRegionInLayer(layer, x, y, z).children
@@ -33,6 +78,14 @@ case class VolumeIPF(width: Int, height: Int, depth: Int, leafLayer: LeafLayer, 
 		regions
 	}
 	
+	/**
+	  * Find which region contains a point in a given layer of the IPF.
+	  * @param layer the layer to look in
+	  * @param x the x coordinate to look at
+	  * @param y the y coordinate to look at
+	  * @param z the z coordinate to look at
+	  * @return the identifier corresponding to the region at (x, y, z) in the given layer
+	  */
 	def getRegionInLayer(layer: Int, x: Int, y: Int, z: Int): Node = {
 		var region: Node = branchLayers.last.nodes(leafLayer.pixelInfo(x)(y)(z).parent)
 		for (i <- 2 to layer)
@@ -40,21 +93,36 @@ case class VolumeIPF(width: Int, height: Int, depth: Int, leafLayer: LeafLayer, 
 		region
 	}
 	
+	/**
+	  * Find all neighbours of a region (assumed to be in the last branch layer).
+	  * @param region the region identifier
+	  * @return a list of region identifiers of neighbouring regions
+	  */
 	def getNeighbours(region: Int): List[Int] = {
 		branchLayers.last.edges(region).map(edge => edge._1)
 	}
 	
+	/**
+	  * Find the z coordinate of a given region (assumed to be in the last branch layer).
+	  * Note this assumes the IPF is an axial one (ie. has been made with separate forests for each X-Y slice).
+	  * @param region the region identifier
+	  * @return the z coordinate of the region
+	  */
 	def getZ(region: Int): Int = {
 		getRegionPixels(region).head._3
 	}
 }
 
-case class LeafLayer(sizeX: Int, sizeY: Int, sizeZ: Int, pixelInfo: Array[Array[Array[PixelProperties]]],
-					 regionToPixels: mutable.Map[Int, List[(Int, Int, Int)]])
-
-case class BranchLayer(nodes: mutable.Map[Int, Node], edges: mutable.Map[Int, List[(Int, Int)]])
-
+/**
+  * Implements a parser for an IPF.
+  */
 object IPF extends Parser {
+	
+	/**
+	  * Read an IPF from a file.
+	  * @param fileName the file to read from
+	  * @return the IPF in the file
+	  */
 	def loadFromFile(fileName: String): VolumeIPF = {
 		implicit val in = new BufferedInputStream(new FileInputStream(fileName))
 		checkLineIs("VolumeIPF")

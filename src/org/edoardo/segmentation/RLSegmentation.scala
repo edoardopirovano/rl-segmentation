@@ -5,7 +5,7 @@ import java.io.File
 import ij.IJ
 import ij.io.{FileSaver, Opener}
 import ij.plugin.FolderOpener
-import org.edoardo.bitmap.{Raw, WrappedImage}
+import org.edoardo.image.{Raw, WrappedImage}
 import org.edoardo.parser.{IPF, MFS, VolumeIPF}
 import org.edoardo.rl.Policy
 
@@ -22,12 +22,15 @@ object RLSegmentation {
 	def main(args: Array[String]): Unit = {
 		if (args(0) == "one")
 			experiementOne()
-		else if (args(0) == "two)")
+		else if (args(0) == "two")
 			experiementTwo()
 		else
 			println("Invalid experiment number.")
 	}
 	
+	/**
+	  * The first experiment we ran on CT scans from the Botnar Research Centre.
+	  */
 	def experiementOne(): Unit = {
 		val imageInfos = List(
 			// Training data
@@ -63,6 +66,9 @@ object RLSegmentation {
 				Some("knee" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 0)
 	}
 	
+	/**
+	  * The second experiment we can on MRI scans from SKI10 grand challenge.
+	  */
 	def experiementTwo(): Unit = {
 		val imageInfos = List(
 			// Training data
@@ -98,6 +104,17 @@ object RLSegmentation {
 				Some("image" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 0)
 	}
 	
+	/**
+	  * Apply our algorithm to an image.
+	  * @param name the name of the file (or folder) the image (or layers of the image) can be found in
+	  * @param ipfName the name of the file containing the IPF for the image
+	  * @param resultName the name of the result file to store the segmentation result in, should end in .tiff
+	  * @param seed the seed point to begin growing the region from
+	  * @param windowing the windowing to use, in the form of a pair of (centre, width)
+	  * @param gtName the name of the file containing the gold standard to compare with (and learn from, if applicable)
+	  * @param stayInLayer the layer to explore in (-1 to explore the whole image)
+	  * @param numPracticeRuns the number of times to practice on this image (0 to not train on this image)
+	  */
 	def doImage(name: String, ipfName: String, resultName: String, seed: (Int, Int, Int), windowing: (Int, Int) = (0, 0),
 				gtName: Option[String] = None, stayInLayer: Integer = -1, numPracticeRuns: Int = 40): Unit = {
 		val img: WrappedImage = new WrappedImage(
@@ -134,6 +151,13 @@ object RLSegmentation {
 		regionInfoCache.clear()
 	}
 	
+	/**
+	  * Get the information for a given region from the first branch layer of the IPF.
+	  * @param region the identifier for the region
+	  * @param ipf the IPF of the image we are considering
+	  * @param img the image we are considering
+	  * @return the information to be used by the agent to decide whether or not to include this region
+	  */
 	def getInfo(region: Int, ipf: VolumeIPF, img: WrappedImage): RegionInfo = {
 		regionInfoCache.getOrElseUpdate(region, {
 			val pixels: List[(Int, Int, Int)] = ipf.getRegionPixels(region)
@@ -146,13 +170,22 @@ object RLSegmentation {
 		})
 	}
 	
+	/**
+	  * Analyse the given image.
+	  * @param img the image to analyse
+	  * @param ipf the IPF for the image
+	  * @param gt the gold standard to compare to, if applicable
+	  * @param seed the seed point to grow from
+	  * @param stayInLayer whether or not to remain in the same layer
+	  * @return the result of segmenting the image
+	  */
 	def analyseImage(img: WrappedImage, ipf: VolumeIPF, gt: Option[SegmentationResult], seed: (Int, Int, Int),
 					 stayInLayer: Boolean): SegmentationResult = {
 		if (gt.isDefined)
 			assert(img.width == gt.get.width && img.height == gt.get.height && img.depth == gt.get.depth)
 		val selection = new Selection(img.height, img.width, img.depth, ipf, stayInLayer)
 		var decisions: List[(RegionInfo, Int, Decision)] = List()
-		selection.startPixel(seed._1, seed._2, seed._3, img, if (gt.isDefined) 2 else 3)
+		selection.startPixel(seed._1, seed._2, seed._3, if (gt.isDefined) 2 else 3)
 		while (!selection.completed()) {
 			val region: Int = selection.getRegion
 			val state: RegionInfo = getInfo(region, ipf, img)
@@ -175,6 +208,15 @@ object RLSegmentation {
 		result
 	}
 	
+	/**
+	  * Calculates the reward to give our agent for deciding to include or exclude a given region.
+	  * @param region the region considered
+	  * @param decision whether or not the agent chose to include it
+	  * @param ipf the IPF for the
+	  * @param gt the gold standard we are comparing against (this function will return constant 0 if this is None)
+	  * @return a value corresponding to how many more pixels the decision was correct for (so, this will be a positive
+	  *         value if the correct decision was made, and negative otherwise)
+	  */
 	def reward(region: Int, decision: Boolean, ipf: VolumeIPF, gt: Option[SegmentationResult]): Int = {
 		if (gt.isEmpty) return 0
 		val pixels: List[(Int, Int, Int)] = ipf.getRegionPixels(region)
@@ -185,6 +227,12 @@ object RLSegmentation {
 		else -reward
 	}
 	
+	/**
+	  * Create a string containing the scores of a segmentation compared to a gold standard.
+	  * @param result the result of a segmentation
+	  * @param gt the gold standard we are comparing against
+	  * @return A tab separated String of values consisting of the DSC, TPVF and FPVF of the segmentation.
+	  */
 	def score(result: SegmentationResult, gt: SegmentationResult): String = {
 		var overlap = 0
 		var resultSize = 0

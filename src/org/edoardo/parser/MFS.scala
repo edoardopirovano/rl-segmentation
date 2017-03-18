@@ -4,8 +4,18 @@ import java.io.{BufferedInputStream, FileInputStream}
 
 import org.edoardo.segmentation.SegmentationResult
 
+/**
+  * Implements a parser for a Multi Feature Set (MFS), which describes selections in an IPF. Note we make the simplifying
+  * assumption that there is only one feature in the image, and it is called "Level Set 0"
+  */
 object MFS extends Parser {
 	
+	/**
+	  * Load a MFS from a file.
+	  * @param fileName the file to load the MFS from
+	  * @param ipf the IPF corresponding to the MFS we are loading
+	  * @return a segmentation result containing the region described by the MFS
+	  */
 	def loadFromFile(fileName: String, ipf: VolumeIPF): SegmentationResult = {
 		implicit val in = new BufferedInputStream(new FileInputStream(fileName))
 		checkLineIs("MFS Text 0")
@@ -26,7 +36,6 @@ object MFS extends Parser {
 		}
 		
 		checkLineIs("}")
-		
 		
 		val result: Array[Array[Array[Boolean]]] = Array.fill[Boolean](ipf.width, ipf.height, ipf.depth)(false)
 		for ((x, y, z) <- regions.flatMap(region => ipf.getRegionPixels(region._1, region._2)))

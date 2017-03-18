@@ -37,14 +37,6 @@ class Policy[A <: Action, S <: State[A]] {
 		if (Random.nextInt(epsilonReciprocal) == 0) randomPlay(state)
 		else greedyPlay(state)
 	
-	def weakeningEpsilonSoft(state: S, epsilonReciprocal: Int): A = {
-		val adjustedEpsilon: Long = epsilonReciprocal * (1 + timesStateSeen(state))
-		if (adjustedEpsilon < Integer.MAX_VALUE) epsilonSoft(state, adjustedEpsilon.toInt) else greedyPlay(state)
-	}
-		
-	
-	def timesStateSeen(state: S): Long = values.get(state).map(seen => seen.values.map(_._2).sum).getOrElse(0)
-	
 	/**
 	  * Choose a random action to play.
 	  *
