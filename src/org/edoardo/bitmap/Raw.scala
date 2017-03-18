@@ -11,19 +11,21 @@ object Raw {
 	case object UCHAR extends ByteType
 	case object USHORT extends ByteType
 	
-	def openMetadata(name: String): ImagePlus = {
+	def openMetadata(name: String, stayInLayer: Integer): ImagePlus = {
 		val (width, height, depth, dataFile, byteType) = readMetadata(name)
 		assert(byteType == USHORT)
 		implicit val in = new LittleEndianDataInputStream(new BufferedInputStream(new FileInputStream(dataFile)))
-		val image: ImagePlus = IJ.createImage(name, "16-bit", width, height, depth)
+		val image: ImagePlus = IJ.createImage(name, "16-bit", width, height, if (stayInLayer == -1) depth else 1)
 		for (z <- 0 until depth) {
-			for (y <- 0 until height) {
-				for (x <- 0 until width) {
-					val intensity: Short = in.readShort()
-					image.getProcessor.putPixel(x, y, intensity)
+				for (y <- 0 until height) {
+					for (x <- 0 until width) {
+						val intensity: Short = in.readShort()
+						if (stayInLayer == -1 || z == stayInLayer)
+							image.getProcessor.putPixel(x, y, intensity)
+					}
 				}
-			}
-			image.setZ(image.getZ + 1)
+			if (stayInLayer == -1)
+				image.setZ(image.getZ + 1)
 		}
 		image
 	}

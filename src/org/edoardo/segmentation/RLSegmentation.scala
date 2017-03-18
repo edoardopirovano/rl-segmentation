@@ -20,7 +20,12 @@ object RLSegmentation {
 	private case class ImageInfo(id: Integer, fileName: String, layer: Integer, seed: (Int, Int, Int), windowing: (Int, Int))
 	
 	def main(args: Array[String]): Unit = {
-		experiementOne()
+		if (args(0) == "one")
+			experiementOne()
+		else if (args(0) == "two)")
+			experiementTwo()
+		else
+			println("Invalid experiment number.")
 	}
 	
 	def experiementOne(): Unit = {
@@ -58,11 +63,46 @@ object RLSegmentation {
 				Some("knee" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 0)
 	}
 	
+	def experiementTwo(): Unit = {
+		val imageInfos = List(
+			// Training data
+			ImageInfo(4, "image-004.mhd", 66, (100, 100, 0), (416, 781)),
+			ImageInfo(15, "image-015.mhd", 70, (150, 100, 0), (251, 492)),
+			ImageInfo(41, "image-041.mhd", 59, (100, 140, 0), (79, 150)),
+			ImageInfo(42, "image-042.mhd", 61, (100, 100, 0), (492, 985)),
+			ImageInfo(50, "image-050.mhd", 64, (100, 100, 0), (64, 128)),
+			
+			// Evaluation data
+			ImageInfo(39, "image-039.mhd", 69, (100, 100, 0), (64, 127)),
+			ImageInfo(46, "image-046.mhd", 69, (100, 100, 0), (870,1493)),
+			ImageInfo(52, "image-052.mhd", 83, (100, 100, 0), (162, 321)),
+			ImageInfo(54, "image-054.mhd", 75, (100, 100, 0), (598, 1013)),
+			ImageInfo(60, "image-060.mhd", 76, (100, 100, 0), (415, 830))
+		)
+		println("-- Before Training --")
+		for (imageInfo <- imageInfos)
+			doImage(imageInfo.fileName, "image" + imageInfo.id + "-layer" + imageInfo.layer + ".ipf",
+				"preTraining-" + imageInfo.id + ".tiff", imageInfo.seed, imageInfo.windowing,
+				Some("image" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 0)
+		
+		println("-- Training --")
+		for (imageInfo <- imageInfos.take(5))
+			doImage(imageInfo.fileName, "image" + imageInfo.id + "-layer" + imageInfo.layer + ".ipf",
+				"training-" + imageInfo.id + ".tiff", imageInfo.seed, imageInfo.windowing,
+				Some("image" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 40)
+		
+		println("-- After Training --")
+		for (imageInfo <- imageInfos)
+			doImage(imageInfo.fileName, "image" + imageInfo.id + "-layer" + imageInfo.layer + ".ipf",
+				"postTraining-" + imageInfo.id + ".tiff", imageInfo.seed, imageInfo.windowing,
+				Some("image" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 0)
+	}
+	
 	def doImage(name: String, ipfName: String, resultName: String, seed: (Int, Int, Int), windowing: (Int, Int) = (0, 0),
 				gtName: Option[String] = None, stayInLayer: Integer = -1, numPracticeRuns: Int = 40): Unit = {
 		val img: WrappedImage = new WrappedImage(
 			if (name.takeRight(3) == "mhd")
-				Raw.openMetadata(name)
+				Raw.openMetadata(name, stayInLayer + 1)
 			else if (new File(name).isDirectory)
 				new FolderOpener().openFolder(name)
 			else IJ.openImage(name), windowing)
