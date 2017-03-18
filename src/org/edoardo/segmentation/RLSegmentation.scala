@@ -20,6 +20,10 @@ object RLSegmentation {
 	private case class ImageInfo(id: Integer, fileName: String, layer: Integer, seed: (Int, Int, Int), windowing: (Int, Int))
 	
 	def main(args: Array[String]): Unit = {
+		experiementOne()
+	}
+	
+	def experiementOne(): Unit = {
 		val imageInfos = List(
 			// Training data
 			ImageInfo(1, "Knee1/Knee1_0009.dcm", 10, (200, 200, 0), (1214, 2408)),
@@ -27,7 +31,7 @@ object RLSegmentation {
 			ImageInfo(11, "Knee11/Knee11_0009.dcm", 9, (200, 200, 0), (1100, 2200)),
 			ImageInfo(12, "Knee12/Knee12_0009.dcm", 10, (200, 200, 0), (1050, 2050)),
 			ImageInfo(13, "Knee13/Knee13_0010.dcm", 10, (200, 200, 0), (1050, 2050)),
-				
+			
 			// Evaluation data
 			ImageInfo(2, "Knee2/Knee2_0006.dcm", 6, (200, 150, 0), (1325, 1604)),
 			ImageInfo(3, "Knee3/Knee3_0010.dcm", 11, (200, 200, 0), (1126, 2231)),
