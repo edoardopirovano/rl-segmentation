@@ -50,7 +50,7 @@ object RLSegmentation {
 		println("-- After Training --")
 		for (imageInfo <- imageInfos)
 			doImage(imageInfo.fileName, "knee" + imageInfo.id + "-layer" + imageInfo.layer + ".ipf",
-				"preTraining-" + imageInfo.id + ".tiff", imageInfo.seed, imageInfo.windowing,
+				"postTraining-" + imageInfo.id + ".tiff", imageInfo.seed, imageInfo.windowing,
 				Some("knee" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 0)
 	}
 	
