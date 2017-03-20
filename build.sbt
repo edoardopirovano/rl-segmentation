@@ -26,5 +26,6 @@ lazy val root: Project = (project in file(".")).
       libraryDependencies += "net.imglib2" % "imglib2" % "3.2.1",
       libraryDependencies += "net.imglib2" % "imglib2-algorithm" % "0.6.2",
       libraryDependencies += "net.imglib2" % "imglib2-ij" % "2.0.0-beta-35",
+      libraryDependencies += "fr.inra.ijpb" % "MorphoLibJ_" % "1.3.2",
       libraryDependencies += "com.google.guava" % "guava" % "21.0"
   )
