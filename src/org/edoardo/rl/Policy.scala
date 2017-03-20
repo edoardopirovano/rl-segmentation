@@ -8,7 +8,7 @@ import scala.util.Random
   * @tparam T class of the actions that are performed from this state
   */
 abstract class State[T <: Action] {
-	def getAll: List[T]
+	def getAvailableActions: List[T]
 }
 
 /**
@@ -57,7 +57,7 @@ class Policy[A <: Action, S <: State[A]] {
 	  */
 	private def addStateIfMissing(state: S): TrieMap[A, (BigDecimal, Long)] = values.getOrElseUpdate(state, {
 		val result: TrieMap[A, (BigDecimal, Long)] = new TrieMap()
-		for (a <- state.getAll)
+		for (a <- state.getAvailableActions)
 			result += ((a, (BigDecimal(0.0), 0L)))
 		result
 	})

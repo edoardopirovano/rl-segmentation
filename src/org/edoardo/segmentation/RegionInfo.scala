@@ -17,5 +17,5 @@ case class RegionInfo(info: List[Int]) extends State[Decision] {
 	  * Gives the actions available for a region, which are always to include or exclude it.
 	  * @return the actions available for a region
 	  */
-	override def getAll: List[Decision] = List(Decision(true), Decision(false))
+	override def getAvailableActions: List[Decision] = List(Decision(true), Decision(false))
 }
