@@ -59,6 +59,8 @@ object RLSegmentation {
 				"training-" + imageInfo.id + ".tiff", imageInfo.seed, imageInfo.windowing,
 				Some("knee" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 40)
 		
+		// printPolicy()
+		
 		println("-- After Training --")
 		for (imageInfo <- imageInfos)
 			doImage(imageInfo.fileName, "knee" + imageInfo.id + "-layer" + imageInfo.layer + ".ipf",
@@ -248,5 +250,31 @@ object RLSegmentation {
 		(2f * overlap) / (gtSize + resultSize) + "\t"  +
 			overlap.toFloat / gtSize + "\t" +
 			falsePositive.toFloat / (imageSize - gtSize)
+	}
+	
+	/**
+	  * Prints out the current policy (ie. what the agent believes to be the best action in every state).
+	  */
+	def printPolicy(): Unit = {
+		println("-- Policy Learnt --")
+		for (x <- 0 to 255) {
+			for (y <- 0 to 255)
+				print((if (!policy.haveEncountered(RegionInfo(List(x, y)))) 0
+						else if (policy.greedyPlay(RegionInfo(List(x, y))).include) 1
+						else -1) + "\t")
+			println()
+		}
+		printPercentageSeen()
+	}
+	
+	def printPercentageSeen(): Unit = {
+		var total = 0
+		var seen = 0
+		for (x <- 0 to 255; y <- 0 to 255) {
+			total += 1
+			if (policy.haveEncountered(RegionInfo(List(x, y))))
+				seen += 1
+		}
+		println("Percentage of states seen: " + 100 * (seen.toFloat / total))
 	}
 }

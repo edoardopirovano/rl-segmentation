@@ -41,26 +41,17 @@ class Policy[A <: Action, S <: State[A]] {
 	  * Choose a random action to play.
 	  * @return a random action
 	  */
-	def randomPlay(state: S): A = Random.shuffle(addStateIfMissing(state).keys).head
+	def randomPlay(state: S): A = Random.shuffle(state.getAvailableActions).head
 	
 	/**
 	  * Choose the greedy action to play.
 	  * @param state the state to consider
 	  * @return the current greedy action from the given state
 	  */
-	def greedyPlay(state: S): A = addStateIfMissing(state).maxBy(_._2._1)._1
-	
-	/**
-	  * Add a state to the mapping if doesn't already exist.
-	  * @param state the state to add to the mapping
-	  * @return the corresponding object for its estimated value
-	  */
-	private def addStateIfMissing(state: S): TrieMap[A, (BigDecimal, Long)] = values.getOrElseUpdate(state, {
-		val result: TrieMap[A, (BigDecimal, Long)] = new TrieMap()
-		for (a <- state.getAvailableActions)
-			result += ((a, (BigDecimal(0.0), 0L)))
-		result
-	})
+	def greedyPlay(state: S): A = {
+		if (!haveEncountered(state)) state.getAvailableActions.head
+		else values(state).maxBy(_._2._1)._1
+	}
 	
 	/**
 	  * Update the policy by adding an observed reward for a given play.
@@ -69,9 +60,24 @@ class Policy[A <: Action, S <: State[A]] {
 	  * @param reward the reward obtained
 	  */
 	def update(state: S, action: A, reward: Double): Unit = {
-		var map: TrieMap[A, (BigDecimal, Long)] = addStateIfMissing(state)
+		var map: TrieMap[A, (BigDecimal, Long)] = values.getOrElseUpdate(state, {
+			val result: TrieMap[A, (BigDecimal, Long)] = new TrieMap()
+			for (a <- state.getAvailableActions)
+				result += ((a, (BigDecimal(0.0), 0L)))
+			result
+		})
 		val old: (BigDecimal, Long) = map(action)
 		map += ((action, (((old._1 * old._2) + reward) / (old._2 + 1), old._2 + 1)))
 		values += ((state, map))
+	}
+	
+	/**
+	  * Check if a state has been encountered before.
+	  * @param state the state to check
+	  * @return whether or not we have seen this state  before
+	  */
+	def haveEncountered(state: S): Boolean = {
+		if (values.get(state).isDefined) true
+		else false
 	}
 }
