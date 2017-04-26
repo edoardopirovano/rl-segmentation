@@ -33,16 +33,17 @@ class SegmentationResult(selected: Array[Array[Array[Boolean]]]) {
 	
 	/**
 	  * Build up an image of the result stored by this object.
+	  * @param value the value to put for pixels that are set (defaults to 255)
 	  * @return an image corresponding to the result, with selected pixels white and the rest black
 	  */
-	def buildResult(): ImagePlus = {
+	def buildResult(value: Int = 255): ImagePlus = {
 		val result: ImagePlus = IJ.createImage("result", "8-bit", width, height, depth)
 		for (z <- 1 to depth) {
 			result.setZ(z)
 			val processor: ImageProcessor = result.getProcessor
 			for (y <- 0 until height; x <- 0 until width) {
 				if (doesContain(x, y, z - 1))
-					processor.putPixel(x, y, 255)
+					processor.putPixel(x, y, value)
 				else
 					processor.putPixel(x, y, 0)
 			}
@@ -52,10 +53,12 @@ class SegmentationResult(selected: Array[Array[Array[Boolean]]]) {
 	
 	/**
 	  * Build a result image and write it out to a file, overwriting it if it already exists.
-	  * @param fileName the name of the file to write the result image to (should end in .tiff)
+	  * @param fileName the name of the file to write the result image to
+	  * @param saveAsRaw whether to save the results as a RAW file (will be saved as TIFF otherwise)
 	  */
-	def writeTo(fileName: String): Unit = {
-		new FileSaver(buildResult()).saveAsTiff(fileName)
+	def writeTo(fileName: String, saveAsRaw: Boolean): Unit = {
+		if (!saveAsRaw) new FileSaver(buildResult()).saveAsTiff(fileName + ".tiff")
+		else new FileSaver(buildResult(1)).saveAsRaw(fileName + ".raw")
 	}
 	
 	/**

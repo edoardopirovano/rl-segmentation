@@ -50,22 +50,22 @@ object RLSegmentation {
 		println("-- Before Training --")
 		for (imageInfo <- imageInfos)
 			doImage(imageInfo.fileName, "knee" + imageInfo.id + "-layer" + imageInfo.layer + ".ipf",
-				"preTraining-" + imageInfo.id + ".tiff", imageInfo.seed, imageInfo.windowing,
-				Some("knee" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 0)
+				"preTraining-" + imageInfo.id, imageInfo.seed, imageInfo.windowing,
+				Some("knee" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 0, saveAsRaw = false)
 		
 		println("-- Training --")
 		for (imageInfo <- imageInfos.take(5))
 			doImage(imageInfo.fileName, "knee" + imageInfo.id + "-layer" + imageInfo.layer + ".ipf",
-				"training-" + imageInfo.id + ".tiff", imageInfo.seed, imageInfo.windowing,
-				Some("knee" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 40)
+				"training-" + imageInfo.id, imageInfo.seed, imageInfo.windowing,
+				Some("knee" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 40, saveAsRaw = false)
 		
 		// printPolicy()
 		
 		println("-- After Training --")
 		for (imageInfo <- imageInfos)
 			doImage(imageInfo.fileName, "knee" + imageInfo.id + "-layer" + imageInfo.layer + ".ipf",
-				"postTraining-" + imageInfo.id + ".tiff", imageInfo.seed, imageInfo.windowing,
-				Some("knee" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 0)
+				"postTraining-" + imageInfo.id, imageInfo.seed, imageInfo.windowing,
+				Some("knee" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 0, saveAsRaw = false)
 	}
 	
 	/**
@@ -90,20 +90,20 @@ object RLSegmentation {
 		println("-- Before Training --")
 		for (imageInfo <- imageInfos)
 			doImage(imageInfo.fileName, "image" + imageInfo.id + "-layer" + imageInfo.layer + ".ipf",
-				"preTraining-" + imageInfo.id + ".tiff", imageInfo.seed, imageInfo.windowing,
-				Some("image" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 0)
+				"preTraining-" + imageInfo.id, imageInfo.seed, imageInfo.windowing,
+				Some("image" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 0, saveAsRaw = true)
 		
 		println("-- Training --")
 		for (imageInfo <- imageInfos.take(5))
 			doImage(imageInfo.fileName, "image" + imageInfo.id + "-layer" + imageInfo.layer + ".ipf",
-				"training-" + imageInfo.id + ".tiff", imageInfo.seed, imageInfo.windowing,
-				Some("image" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 40)
+				"training-" + imageInfo.id, imageInfo.seed, imageInfo.windowing,
+				Some("image" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 40, saveAsRaw = true)
 		
 		println("-- After Training --")
 		for (imageInfo <- imageInfos)
 			doImage(imageInfo.fileName, "image" + imageInfo.id + "-layer" + imageInfo.layer + ".ipf",
-				"postTraining-" + imageInfo.id + ".tiff", imageInfo.seed, imageInfo.windowing,
-				Some("image" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 0)
+				"postTraining-" + imageInfo.id, imageInfo.seed, imageInfo.windowing,
+				Some("image" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 0, saveAsRaw = true)
 	}
 	
 	/**
@@ -116,16 +116,17 @@ object RLSegmentation {
 	  * @param gtName the name of the file containing the gold standard to compare with (and learn from, if applicable)
 	  * @param stayInLayer the layer to explore in (-1 to explore the whole image)
 	  * @param numPracticeRuns the number of times to practice on this image (0 to not train on this image)
+	  * @param saveAsRaw whether to save the image as RAW (will be saved as TIFF otherwise)
 	  */
 	def doImage(name: String, ipfName: String, resultName: String, seed: (Int, Int, Int), windowing: (Int, Int) = (0, 0),
-				gtName: Option[String] = None, stayInLayer: Integer = -1, numPracticeRuns: Int = 40): Unit = {
+				gtName: Option[String] = None, stayInLayer: Integer = -1, numPracticeRuns: Int = 40, saveAsRaw: Boolean): Unit = {
 		val img: WindowedImage = new WindowedImage(
 			if (name.takeRight(3) == "mhd")
 				Raw.openMetadata(name, stayInLayer + 1)
 			else if (new File(name).isDirectory)
 				new FolderOpener().openFolder(name)
 			else IJ.openImage(name), windowing)
-		new FileSaver(img.image).saveAsTiff(resultName.dropRight(5) + "-original.tiff")
+		new FileSaver(img.image).saveAsTiff(resultName + "-original.tiff")
 		val ipf: VolumeIPF = IPF.loadFromFile(ipfName)
 		val gt: Option[SegmentationResult] = gtName.map(name =>
 				if (name.takeRight(3) == "mfs")
@@ -137,19 +138,19 @@ object RLSegmentation {
 						else opener.openImage(name)
 					).toSegmentationResult(stayInLayer))
 		if (gt.isDefined)
-			gt.get.writeTo(resultName.dropRight(5) + "-gt.tiff")
+			gt.get.writeTo(resultName + "-gt", saveAsRaw)
 		img.doPreProcess()
 		if (gt.isDefined) {
 			for (i <- 0 until numPracticeRuns) {
 				val result: SegmentationResult = analyseImage(img, ipf, gt, seed, stayInLayer != -1)
 				println(name + "\t" + i + "\t" + score(result, gt.get))
-				result.writeTo(resultName.dropRight(5) + "-" + i + ".tiff")
+				result.writeTo(resultName + "-" + i, saveAsRaw)
 			}
 		}
 		val result: SegmentationResult = analyseImage(img, ipf, None, seed, stayInLayer != -1)
 		if (gt.isDefined)
 			println(name + "\tfin\t" + score(result, gt.get))
-		result.writeTo(resultName)
+		result.writeTo(resultName, saveAsRaw)
 		regionInfoCache.clear()
 	}
 	
