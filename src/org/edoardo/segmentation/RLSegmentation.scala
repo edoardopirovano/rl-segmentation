@@ -91,19 +91,19 @@ object RLSegmentation {
 		for (imageInfo <- imageInfos)
 			doImage(imageInfo.fileName, "image" + imageInfo.id + "-layer" + imageInfo.layer + ".ipf",
 				"preTraining-" + imageInfo.id, imageInfo.seed, imageInfo.windowing,
-				Some("image" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 0, saveAsRaw = true)
+				Some("labels-%03d.mhd".format(imageInfo.id.toInt)), imageInfo.layer, 0, saveAsRaw = false)
 		
 		println("-- Training --")
 		for (imageInfo <- imageInfos.take(5))
 			doImage(imageInfo.fileName, "image" + imageInfo.id + "-layer" + imageInfo.layer + ".ipf",
 				"training-" + imageInfo.id, imageInfo.seed, imageInfo.windowing,
-				Some("image" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 40, saveAsRaw = true)
+				Some("labels-%03d.mhd".format(imageInfo.id.toInt)), imageInfo.layer, 40, saveAsRaw = false)
 		
 		println("-- After Training --")
 		for (imageInfo <- imageInfos)
 			doImage(imageInfo.fileName, "image" + imageInfo.id + "-layer" + imageInfo.layer + ".ipf",
 				"postTraining-" + imageInfo.id, imageInfo.seed, imageInfo.windowing,
-				Some("image" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 0, saveAsRaw = true)
+				Some("labels-%03d.mhd".format(imageInfo.id.toInt)), imageInfo.layer, 0, saveAsRaw = false)
 	}
 	
 	/**
