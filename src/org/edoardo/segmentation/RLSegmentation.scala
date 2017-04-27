@@ -11,25 +11,32 @@ import org.edoardo.rl.Policy
 
 import scala.collection.mutable
 
+/**
+  * Contains the main code for running the segmentation algorithm.
+  */
 object RLSegmentation {
 	val policy = new Policy[Decision, RegionInfo]
 	val opener = new Opener()
 	val regionInfoCache: mutable.Map[Int, RegionInfo] = mutable.Map.empty
 	val epsilonReciprocal = 10
 	
-	private case class ImageInfo(id: Integer, fileName: String, layer: Integer, seed: (Int, Int, Int), windowing: (Int, Int))
-	
+	/**
+	  * Main method to run our segmentation algorithm.
+	  * @param args A number between one and three containing the number of the experiment to run.
+	  */
 	def main(args: Array[String]): Unit = {
-		if (args(0) == "one")
+		if (args(0) == "1")
 			experiementOne()
-		else if (args(0) == "two")
+		else if (args(0) == "2")
 			experiementTwo()
+		else if (args(0) == "3")
+			experimentThree()
 		else
 			println("Invalid experiment number.")
 	}
 	
 	/**
-	  * The first experiment we ran on CT scans from the Botnar Research Centre.
+	  * The first experiment we ran on MRI scans from the Botnar Research Centre.
 	  */
 	def experiementOne(): Unit = {
 		val imageInfos = List(
@@ -69,7 +76,7 @@ object RLSegmentation {
 	}
 	
 	/**
-	  * The second experiment we can on MRI scans from SKI10 grand challenge.
+	  * The second experiment we ran on MRI scans from SKI10 grand challenge.
 	  */
 	def experiementTwo(): Unit = {
 		val imageInfos = List(
@@ -82,7 +89,7 @@ object RLSegmentation {
 			
 			// Evaluation data
 			ImageInfo(39, "image-039.mhd", 69, (100, 100, 0), (64, 127)),
-			ImageInfo(46, "image-046.mhd", 69, (100, 100, 0), (870,1493)),
+			ImageInfo(46, "image-046.mhd", 69, (100, 100, 0), (870, 1493)),
 			ImageInfo(52, "image-052.mhd", 83, (100, 100, 0), (162, 321)),
 			ImageInfo(54, "image-054.mhd", 75, (100, 100, 0), (598, 1013)),
 			ImageInfo(60, "image-060.mhd", 76, (100, 100, 0), (415, 830))
@@ -107,16 +114,42 @@ object RLSegmentation {
 	}
 	
 	/**
+	  * The third experiment we ran on XRay images.
+	  */
+	def experimentThree(): Unit = {
+		val xrayInfos = List(
+			XRayInfo(1, "knee1-gt.pgm", (264, 579, 0)),
+			XRayInfo(3, "knee3-gt.pgm", (135, 237, 0)),
+			XRayInfo(2, "knee2.mfs", (135, 250, 0))
+		)
+		println("-- Before Training --")
+		for (xrayInfo <- xrayInfos)
+			doImage("knee" + xrayInfo.id + ".pgm", "knee" + xrayInfo.id + ".ipf", "preTraining-" + xrayInfo.id,
+				xrayInfo.seed, (127, 255), Some(xrayInfo.gt), 0, 0, saveAsRaw = false)
+		
+		println("-- Training --")
+		for (xrayInfo <- xrayInfos.take(2))
+			doImage("knee" + xrayInfo.id + ".pgm", "knee" + xrayInfo.id + ".ipf", "training-" + xrayInfo.id,
+				xrayInfo.seed, (127, 255), Some(xrayInfo.gt), 0, 40, saveAsRaw = false)
+		
+		println("-- After Training --")
+		for (xrayInfo <- xrayInfos)
+			doImage("knee" + xrayInfo.id + ".pgm", "knee" + xrayInfo.id + ".ipf", "postTraining-" + xrayInfo.id,
+				xrayInfo.seed, (127, 255), Some(xrayInfo.gt), 0, 0, saveAsRaw = false)
+	}
+	
+	/**
 	  * Apply our algorithm to an image.
-	  * @param name the name of the file (or folder) the image (or layers of the image) can be found in
-	  * @param ipfName the name of the file containing the IPF for the image
-	  * @param resultName the name of the result file to store the segmentation result in, should end in .tiff
-	  * @param seed the seed point to begin growing the region from
-	  * @param windowing the windowing to use, in the form of a pair of (centre, width)
-	  * @param gtName the name of the file containing the gold standard to compare with (and learn from, if applicable)
-	  * @param stayInLayer the layer to explore in (-1 to explore the whole image)
+	  *
+	  * @param name            the name of the file (or folder) the image (or layers of the image) can be found in
+	  * @param ipfName         the name of the file containing the IPF for the image
+	  * @param resultName      the name of the result file to store the segmentation result in, should end in .tiff
+	  * @param seed            the seed point to begin growing the region from
+	  * @param windowing       the windowing to use, in the form of a pair of (centre, width)
+	  * @param gtName          the name of the file containing the gold standard to compare with (and learn from, if applicable)
+	  * @param stayInLayer     the layer to explore in (-1 to explore the whole image)
 	  * @param numPracticeRuns the number of times to practice on this image (0 to not train on this image)
-	  * @param saveAsRaw whether to save the image as RAW (will be saved as TIFF otherwise)
+	  * @param saveAsRaw       whether to save the image as RAW (will be saved as TIFF otherwise)
 	  */
 	def doImage(name: String, ipfName: String, resultName: String, seed: (Int, Int, Int), windowing: (Int, Int) = (0, 0),
 				gtName: Option[String] = None, stayInLayer: Integer = -1, numPracticeRuns: Int = 40, saveAsRaw: Boolean): Unit = {
@@ -129,14 +162,14 @@ object RLSegmentation {
 		new FileSaver(img.image).saveAsTiff(resultName + "-original.tiff")
 		val ipf: VolumeIPF = IPF.loadFromFile(ipfName)
 		val gt: Option[SegmentationResult] = gtName.map(name =>
-				if (name.takeRight(3) == "mfs")
-					MFS.loadFromFile(name, ipf)
-				else
-					new WindowedImage(
-						if (name.takeRight(3) == "mhd")
-							Raw.openLabels(name)
-						else opener.openImage(name)
-					).toSegmentationResult(stayInLayer))
+			if (name.takeRight(3) == "mfs")
+				MFS.loadFromFile(name, ipf)
+			else
+				new WindowedImage(
+					if (name.takeRight(3) == "mhd")
+						Raw.openLabels(name)
+					else opener.openImage(name)
+				).toSegmentationResult(stayInLayer))
 		if (gt.isDefined)
 			gt.get.writeTo(resultName + "-gt", saveAsRaw)
 		img.doPreProcess()
@@ -156,9 +189,10 @@ object RLSegmentation {
 	
 	/**
 	  * Get the information for a given region from the first branch layer of the IPF.
+	  *
 	  * @param region the identifier for the region
-	  * @param ipf the IPF of the image we are considering
-	  * @param img the image we are considering
+	  * @param ipf    the IPF of the image we are considering
+	  * @param img    the image we are considering
 	  * @return the information to be used by the agent to decide whether or not to include this region
 	  */
 	def getInfo(region: Int, ipf: VolumeIPF, img: WindowedImage): RegionInfo = {
@@ -175,10 +209,11 @@ object RLSegmentation {
 	
 	/**
 	  * Analyse the given image.
-	  * @param img the image to analyse
-	  * @param ipf the IPF for the image
-	  * @param gt the gold standard to compare to, if applicable
-	  * @param seed the seed point to grow from
+	  *
+	  * @param img         the image to analyse
+	  * @param ipf         the IPF for the image
+	  * @param gt          the gold standard to compare to, if applicable
+	  * @param seed        the seed point to grow from
 	  * @param stayInLayer whether or not to remain in the same layer
 	  * @return the result of segmenting the image
 	  */
@@ -213,10 +248,11 @@ object RLSegmentation {
 	
 	/**
 	  * Calculates the reward to give our agent for deciding to include or exclude a given region.
-	  * @param region the region considered
+	  *
+	  * @param region   the region considered
 	  * @param decision whether or not the agent chose to include it
-	  * @param ipf the IPF for the
-	  * @param gt the gold standard we are comparing against (this function will return constant 0 if this is None)
+	  * @param ipf      the IPF for the
+	  * @param gt       the gold standard we are comparing against (this function will return constant 0 if this is None)
 	  * @return a value corresponding to how many more pixels the decision was correct for (so, this will be a positive
 	  *         value if the correct decision was made, and negative otherwise)
 	  */
@@ -232,8 +268,9 @@ object RLSegmentation {
 	
 	/**
 	  * Create a string containing the scores of a segmentation compared to a gold standard.
+	  *
 	  * @param result the result of a segmentation
-	  * @param gt the gold standard we are comparing against
+	  * @param gt     the gold standard we are comparing against
 	  * @return A tab separated String of values consisting of the DSC, TPVF and FPVF of the segmentation.
 	  */
 	def score(result: SegmentationResult, gt: SegmentationResult): String = {
@@ -248,7 +285,7 @@ object RLSegmentation {
 			if (gt.doesContain(x, y, z)) gtSize += 1
 			if (result.doesContain(x, y, z) && !gt.doesContain(x, y, z)) falsePositive += 1
 		}
-		(2f * overlap) / (gtSize + resultSize) + "\t"  +
+		(2f * overlap) / (gtSize + resultSize) + "\t" +
 			overlap.toFloat / gtSize + "\t" +
 			falsePositive.toFloat / (imageSize - gtSize)
 	}
@@ -261,8 +298,8 @@ object RLSegmentation {
 		for (x <- 0 to 255) {
 			for (y <- 0 to 255)
 				print((if (!policy.haveEncountered(RegionInfo(List(x, y)))) 0
-						else if (policy.greedyPlay(RegionInfo(List(x, y))).include) 1
-						else -1) + "\t")
+				else if (policy.greedyPlay(RegionInfo(List(x, y))).include) 1
+				else -1) + "\t")
 			println()
 		}
 		printPercentageSeen()
@@ -278,4 +315,9 @@ object RLSegmentation {
 		}
 		println("Percentage of states seen: " + 100 * (seen.toFloat / total))
 	}
+	
+	private case class ImageInfo(id: Integer, fileName: String, layer: Integer, seed: (Int, Int, Int), windowing: (Int, Int))
+	
+	private case class XRayInfo(id: Integer, gt: String, seed: (Int, Int, Int))
+	
 }
