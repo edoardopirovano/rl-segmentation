@@ -305,6 +305,9 @@ object RLSegmentation {
 		printPercentageSeen()
 	}
 	
+	/**
+	  * Prints out the percentage of theoretically possible states actually encountered.
+	  */
 	def printPercentageSeen(): Unit = {
 		var total = 0
 		var seen = 0
