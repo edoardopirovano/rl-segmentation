@@ -18,7 +18,7 @@ object RLSegmentation {
 	val policy = new Policy[Decision, RegionInfo]
 	val opener = new Opener()
 	val regionInfoCache: mutable.Map[Int, RegionInfo] = mutable.Map.empty
-	val epsilonReciprocal = 10
+	var epsilonReciprocal = 10
 	
 	/**
 	  * Main method to run our segmentation algorithm.
@@ -31,6 +31,8 @@ object RLSegmentation {
 			experiementTwo()
 		else if (args(0) == "3")
 			experimentThree()
+		else if (args(0) == "4")
+			experiementFour()
 		else
 			println("Invalid experiment number.")
 	}
@@ -136,6 +138,50 @@ object RLSegmentation {
 		for (xrayInfo <- xrayInfos)
 			doImage("knee" + xrayInfo.id + ".pgm", "knee" + xrayInfo.id + ".ipf", "postTraining-" + xrayInfo.id,
 				xrayInfo.seed, (127, 255), Some(xrayInfo.gt), 0, 0, saveAsRaw = false)
+	}
+	
+	/**
+	  * The fourth experiment we ran to see the effect of changing epsilon.
+	  */
+	def experiementFour(): Unit = {
+		val imageInfos = List(
+			// Training data
+			ImageInfo(1, "Knee1/Knee1_0009.dcm", 10, (200, 200, 0), (1214, 2408)),
+			ImageInfo(10, "Knee10/Knee10_0009.dcm", 10, (200, 200, 0), (1050, 2050)),
+			ImageInfo(11, "Knee11/Knee11_0009.dcm", 9, (200, 200, 0), (1100, 2200)),
+			ImageInfo(12, "Knee12/Knee12_0009.dcm", 10, (200, 200, 0), (1050, 2050)),
+			ImageInfo(13, "Knee13/Knee13_0010.dcm", 10, (200, 200, 0), (1050, 2050)),
+			
+			// Evaluation data
+			ImageInfo(2, "Knee2/Knee2_0006.dcm", 6, (200, 150, 0), (1325, 1604)),
+			ImageInfo(3, "Knee3/Knee3_0010.dcm", 11, (200, 200, 0), (1126, 2231)),
+			ImageInfo(5, "Knee5/Knee5_0008.dcm", 9, (200, 200, 0), (1275, 2500)),
+			ImageInfo(6, "Knee6/Knee6_0010.dcm", 11, (200, 200, 0), (1200, 2400)),
+			ImageInfo(7, "Knee7/Knee7_0010.dcm", 11, (200, 150, 0), (1050, 2050))
+		)
+		for (numRuns <- List(2,5,10,20,40)) {
+			for (epsilon <- List(2,5,10,20,40)) {
+				epsilonReciprocal = epsilon
+				println("-- Before Training --")
+				for (imageInfo <- imageInfos)
+					doImage(imageInfo.fileName, "knee" + imageInfo.id + "-layer" + imageInfo.layer + ".ipf",
+						"preTraining-" + imageInfo.id, imageInfo.seed, imageInfo.windowing,
+						Some("knee" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 0, saveAsRaw = false)
+				
+				println("-- Training --")
+				for (imageInfo <- imageInfos.take(5))
+					doImage(imageInfo.fileName, "knee" + imageInfo.id + "-layer" + imageInfo.layer + ".ipf",
+						"training-" + imageInfo.id, imageInfo.seed, imageInfo.windowing,
+						Some("knee" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, numRuns, saveAsRaw = false)
+				
+				println("-- After Training " + numRuns + " Runs (with epsilon = 1/" + epsilonReciprocal + ")--")
+				for (imageInfo <- imageInfos)
+					doImage(imageInfo.fileName, "knee" + imageInfo.id + "-layer" + imageInfo.layer + ".ipf",
+						"postTraining-" + imageInfo.id, imageInfo.seed, imageInfo.windowing,
+						Some("knee" + imageInfo.id + "-layer" + imageInfo.layer + ".mfs"), imageInfo.layer, 0, saveAsRaw = false)
+				policy.clear()
+			}
+		}
 	}
 	
 	/**

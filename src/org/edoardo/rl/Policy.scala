@@ -80,4 +80,11 @@ class Policy[A <: Action, S <: State[A]] {
 		if (values.get(state).isDefined) true
 		else false
 	}
+	
+	/**
+	  * Clear the policy, forgetting everything learnt.
+	  */
+	def clear(): Unit = {
+		values = TrieMap()
+	}
 }
