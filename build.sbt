@@ -7,6 +7,9 @@ lazy val commonSettings = Seq(
 resolvers +=
     "ImageJ Releases" at "http://maven.imagej.net/content/repositories/releases/"
 
+resolvers +=
+    "Boundless" at "https://repo.boundlessgeo.com/main/"
+
 lazy val root: Project = (project in file(".")).
   settings(commonSettings: _*).
   settings(
